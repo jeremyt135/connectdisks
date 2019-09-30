@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{27211c6b-9a45-4f72-b97d-f21f39f498fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{965f10dc-cbc9-4a0e-85f5-423f2ef39d04}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="testboard.cpp" />
+    <ClCompile Include="src\board.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connectdisks.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\connectdisks\board.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\connectdisks\connectdisks.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
