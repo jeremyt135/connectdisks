@@ -11,7 +11,7 @@ namespace connectdisks
 		class ColumnView;
 		class Column;
 	public:
-		using player_t = int8_t;
+		using player_size_t = uint8_t;
 		using board_size_t = uint8_t;
 
 		using column_view_t = ColumnView;
@@ -31,7 +31,7 @@ namespace connectdisks
 		Board& operator=(Board&& board) noexcept;
 
 		// Attempts to drop a player piece into given column, returning false if column is full.
-		bool dropPieceInColumn(board_size_t column, player_t playerNum);
+		bool dropPieceInColumn(board_size_t column, player_size_t playerNum);
 
 		// Returns true if entire board is full.
 		bool isFull() const noexcept;
@@ -40,10 +40,13 @@ namespace connectdisks
 		bool isColumnFull(board_size_t column) const;
 
 		// Gets the owner of the piece at given column, row. Returns Board::emptySlot if slot is empty.
-		player_t getPieceOwnerAt(board_size_t column, board_size_t row) const;
+		player_size_t getDiskOwnerAt(board_size_t column, board_size_t row) const;
 
 		// Gets a view of an entire column of the board.
 		column_view_t getColumn(board_size_t column) const;
+
+		// Get the height of a column (number of pieces in it)
+		board_size_t getColumnHeight(board_size_t column) const;
 
 		// Gets a view of an entire row of the board.
 		column_value_t getRow(board_size_t row) const;
@@ -52,20 +55,20 @@ namespace connectdisks
 		inline board_size_t getNumRows() const noexcept;
 
 		// Nonplayer value of grid slots.
-		static constexpr player_t emptySlot{-1};
+		static constexpr player_size_t emptySlot{0};
 
 		// Minimum allowed value for column and row.
-		static constexpr board_size_t minColumns{7};
-		static constexpr board_size_t minRows{6};
+		static constexpr board_size_t minColumns{5};
+		static constexpr board_size_t minRows{4};
 	private:
-		using grid_t = std::vector<std::vector<Board::player_t>>;
-		using column_t = std::vector<Board::player_t>;
+		using column_t = std::vector<player_size_t>;
+		using grid_t = std::vector<column_t>;
 
 		board_size_t numColumns;
 		board_size_t numRows;
 
 		grid_t columns;
-		column_t rowIndices;
+		std::vector<board_size_t> rowIndices;
 
 		inline bool isColumnFullInternal(board_size_t column) const noexcept;
 
@@ -89,6 +92,7 @@ namespace connectdisks
 	public:
 		column_t::const_iterator begin() const noexcept;
 		column_t::const_iterator end() const noexcept;
+		column_t::value_type operator[](board_size_t index) const;
 	private:
 		explicit ColumnView(const column_t& column);
 		const column_t& column;
@@ -100,6 +104,7 @@ namespace connectdisks
 	public:
 		column_t::const_iterator begin() const noexcept;
 		column_t::const_iterator end() const noexcept;
+		column_t::value_type operator[](board_size_t index) const;
 	private:
 		explicit Column(column_t&& column);
 		column_t column;

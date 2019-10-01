@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 	Board::board_size_t columns = 7, rows = 6;
 	Board board{columns, rows};
 	std::cout << "created board(numColumns=" << static_cast<int>(board.getNumColumns()) << ", numRows=" << static_cast<int>(board.getNumRows()) << ")\n";
-	Board::player_t player = 1;
+	Board::player_size_t player = 1;
 	for (int i = 0; i < columns; ++i)
 	{
 		board.dropPieceInColumn(i, player);
@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 	}
 
 	{
-		Board::player_t playerAt = board.getPieceOwnerAt(0, 0);
+		Board::player_size_t playerAt = board.getDiskOwnerAt(0, 0);
 		std::cout << "player at 0,0: " << static_cast<int>(playerAt) << "\n";
 	}
 	
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		board.getPieceOwnerAt(columns + 1, 0);
+		board.getDiskOwnerAt(columns + 1, 0);
 	}
 	catch (std::exception& e)
 	{
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		board.getPieceOwnerAt(0, rows + 1);
+		board.getDiskOwnerAt(0, rows + 1);
 	}
 	catch (std::exception& e)
 	{
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		board.getPieceOwnerAt(-1, rows - 1);
+		board.getDiskOwnerAt(-1, rows - 1);
 	}
 	catch (std::exception& e)
 	{
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		board.getPieceOwnerAt(columns - 1, -1);
+		board.getDiskOwnerAt(columns - 1, -1);
 	}
 	catch (std::exception& e)
 	{

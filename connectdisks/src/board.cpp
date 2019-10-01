@@ -72,7 +72,7 @@ bool Board::isColumnFull(Board::board_size_t column) const
 	return isColumnFullInternal(column);
 }
 
-bool Board::dropPieceInColumn(Board::board_size_t column, Board::player_t playerNum)
+bool Board::dropPieceInColumn(Board::board_size_t column, Board::player_size_t playerNum)
 {
 	if (!isColumnInRange(column))
 	{
@@ -88,7 +88,7 @@ bool Board::dropPieceInColumn(Board::board_size_t column, Board::player_t player
 	return true;
 }
 
-Board::player_t Board::getPieceOwnerAt(Board::board_size_t column, Board::board_size_t row) const
+Board::player_size_t Board::getDiskOwnerAt(Board::board_size_t column, Board::board_size_t row) const
 {
 	if (!isColumnInRange(column) || !isRowInRange(row))
 	{
@@ -107,6 +107,15 @@ Board::column_view_t Board::getColumn(Board::board_size_t column) const
 	return ColumnView{columns[column]};
 }
 
+Board::board_size_t connectdisks::Board::getColumnHeight(board_size_t column) const
+{
+	if (!isColumnInRange(column))
+	{
+		throw std::out_of_range("Board::getColumn: index out of range");
+	}
+	return rowIndices[column];
+}
+
 Board::column_value_t  Board::getRow(Board::board_size_t row) const
 {
 	if (!isRowInRange(row))
@@ -114,7 +123,7 @@ Board::column_value_t  Board::getRow(Board::board_size_t row) const
 		throw std::out_of_range("Board::getRow: index out of range");
 	}
 
-	std::vector<player_t> boardRow;
+	std::vector<player_size_t> boardRow;
 	for (const auto& column : columns)
 	{
 		boardRow.push_back(column[row]);
@@ -151,6 +160,11 @@ Board::column_t::const_iterator Board::ColumnView::end() const noexcept
 	return column.end();
 }
 
+Board::column_t::value_type connectdisks::Board::ColumnView::operator[](board_size_t index) const
+{
+	return column[index];
+}
+
 Board::Column::Column(Board::column_t && column) : column{column}
 {
 }
@@ -164,4 +178,9 @@ Board::column_t::const_iterator Board::Column::begin() const noexcept
 Board::column_t::const_iterator Board::Column::end() const noexcept
 {
 	return column.end();
+}
+
+Board::column_t::value_type connectdisks::Board::Column::operator[](board_size_t index) const
+{
+	return column[index];
 }
