@@ -5,7 +5,8 @@
 int main(int argc, char* argv[])
 {
 	using namespace connectdisks;
-	Board::board_size_t columns = 7, rows = 6;
+	const Board::board_size_t columns{7};
+	const Board::board_size_t rows{6};
 	Board board{columns, rows};
 	std::cout << "created board(numColumns=" << static_cast<int>(board.getNumColumns()) << ", numRows=" << static_cast<int>(board.getNumRows()) << ")\n";
 	Board::player_size_t player = 1;
