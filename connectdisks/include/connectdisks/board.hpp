@@ -5,7 +5,9 @@
 
 namespace connectdisks
 {
-	// Game board for Connect Four
+	// Game board for Connect Four.
+	// The board is indexed starting at 0,0 for the bottom left of the board
+	// up to numColumns - 1, numRows - 1 for the top right.
 	class Board
 	{
 		class ColumnView;

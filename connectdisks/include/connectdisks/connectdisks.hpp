@@ -17,6 +17,8 @@ namespace connectdisks
 		ConnectDisks(ConnectDisks&& connect) noexcept;
 		~ConnectDisks();
 
+		ConnectDisks& operator=(ConnectDisks&& connect) noexcept;
+
 		enum class TurnResult : uint8_t;
 		TurnResult takeTurn(Board::player_size_t player, Board::board_size_t column);
 
@@ -30,7 +32,9 @@ namespace connectdisks
 		inline Board::player_size_t getNumPlayers() const noexcept;
 		inline uint32_t getNumTurns() const noexcept;
 
-		ConnectDisks& operator=(ConnectDisks&& connect) noexcept;
+		inline Board::board_size_t getNumColumns() const noexcept;
+		inline Board::board_size_t getNumRows() const noexcept;
+
 
 		static constexpr Board::player_size_t noWinner{Board::emptySlot};
 		static constexpr Board::player_size_t firstPlayerId{1};
@@ -77,4 +81,13 @@ namespace connectdisks
 		return numTurns;
 	}
 
+	inline Board::board_size_t connectdisks::ConnectDisks::getNumColumns() const noexcept
+	{
+		return board.getNumColumns();
+	}
+
+	inline Board::board_size_t connectdisks::ConnectDisks::getNumRows() const noexcept
+	{
+		return board.getNumRows();
+	}
 }

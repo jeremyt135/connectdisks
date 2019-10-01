@@ -16,6 +16,7 @@
     <ClCompile Include="src\connectdisks.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="testconnectdisks.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\connectdisks\board.hpp">

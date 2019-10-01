@@ -114,9 +114,9 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 	const Board::player_size_t lastPlayer{board.getDiskOwnerAt(lastColumn, lastRow)};
 	const Board::column_view_t column{board.getColumn(lastColumn)};
 
-	// check down the column (0 would be top, numRows - 1 would be bottom), starting below
+	// check up the column (0 would be bottom, numRows - 1 would be top), starting above
 	// the last move
-	for (Board::board_size_t row = lastRow + 1; row < board.getNumRows(); ++row)
+	for (int32_t row = lastRow + 1; row < board.getNumRows(); ++row)
 	{
 		Board::player_size_t current = column[row];
 		if (current != lastPlayer)
@@ -133,8 +133,8 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 		}
 	}
 
-	// check up the column, starting above the last move
-	for (Board::board_size_t row = lastRow - 1; row >= 0; --row)
+	// check down the column, starting below the last move
+	for (int32_t row = lastRow - 1; row >= 0; --row)
 	{
 		Board::player_size_t current = column[row];
 		if (current != lastPlayer)
@@ -156,7 +156,7 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 	const Board::column_value_t row{board.getRow(lastRow)};
 
 	// scan row left to right, starting one to the right of last move
-	for (Board::board_size_t col = lastColumn + 1; col < board.getNumColumns(); ++col)
+	for (int32_t col = lastColumn + 1; col < board.getNumColumns(); ++col)
 	{
 		Board::player_size_t current = row[col];
 		if (current != lastPlayer)
@@ -174,7 +174,7 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 	}
 
 	// check right to left, starting one to the left of last move
-	for (Board::board_size_t col = lastColumn - 1; col >= 0; --col)
+	for (int32_t col = lastColumn - 1; col >= 0; --col)
 	{
 		Board::player_size_t current = row[col];
 		if (current != lastPlayer)
@@ -191,20 +191,11 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 		}
 	}
 
-	// check diagonals, if posssible
-
-	// check if too close to a corner
-	if (board.getNumRows() - lastRow < 3 && lastColumn < 3 ||
-		lastRow < 3 && board.getNumColumns() - lastColumn < 3)
-	{
-		return noWinner;
-	}
-
 	count = 1;
 
-	// check down diagonal
-	for (Board::board_size_t row = lastRow + 1, col = lastColumn + 1;
-		row < board.getNumRows(), col < board.getNumColumns();
+	// check up diagonal
+	for (int32_t row = lastRow + 1, col = lastColumn + 1;
+		row < board.getNumRows() && col < board.getNumColumns();
 		++row, ++col)
 	{
 		Board::player_size_t current = board.getDiskOwnerAt(col, row);
@@ -223,9 +214,9 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 	}
 
 
-	// check up diagonal
-	for (Board::board_size_t row = lastRow - 1, col = lastColumn - 1;
-		row >= 0, col >= 0;
+	// check down diagonal
+	for (int32_t row = lastRow - 1, col = lastColumn - 1;
+		row >= 0 && col >= 0;
 		--row, --col)
 	{
 		Board::player_size_t current = board.getDiskOwnerAt(col, row);

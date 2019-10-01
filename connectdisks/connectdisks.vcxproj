@@ -21,7 +21,10 @@
   <ItemGroup>
     <ClCompile Include="src\board.cpp" />
     <ClCompile Include="src\connectdisks.cpp" />
-    <ClCompile Include="testboard.cpp" />
+    <ClCompile Include="testboard.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="testconnectdisks.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\connectdisks\board.hpp" />
