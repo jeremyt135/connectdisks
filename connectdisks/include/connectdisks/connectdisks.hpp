@@ -10,8 +10,8 @@ namespace connectdisks
 	{
 	public:
 		ConnectDisks(
-			Board::player_size_t numPlayers = {2},
-			Board::player_size_t firstPlayer = {firstPlayerId},
+			Board::player_size_t numPlayers = minNumPlayers,
+			Board::player_size_t firstPlayer = defaultFirstPlayer,
 			Board::board_size_t numColumns = Board::minColumns, 
 			Board::board_size_t numRows = Board::minRows);
 		ConnectDisks(ConnectDisks&& connect) noexcept;
@@ -37,7 +37,8 @@ namespace connectdisks
 
 
 		static constexpr Board::player_size_t noWinner{Board::emptySlot};
-		static constexpr Board::player_size_t firstPlayerId{1};
+		static constexpr Board::player_size_t defaultFirstPlayer{1};
+		static constexpr Board::player_size_t minNumPlayers{2};
 	private:
 		Board::player_size_t checkForWinner() const;
 		Board::player_size_t getNextPlayer() const noexcept;

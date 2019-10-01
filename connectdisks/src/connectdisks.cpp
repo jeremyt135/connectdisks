@@ -11,8 +11,8 @@ ConnectDisks::ConnectDisks(
 	Board::board_size_t numColumns,
 	Board::board_size_t numRows) :
 	numTurns{0},
-	numPlayers{numPlayers},
-	currentPlayer{firstPlayer > firstPlayerId && firstPlayer <= numPlayers ? firstPlayer : firstPlayerId},
+	numPlayers{numPlayers >= minNumPlayers ? numPlayers : minNumPlayers},
+	currentPlayer{firstPlayer > defaultFirstPlayer && firstPlayer <= numPlayers ? firstPlayer : defaultFirstPlayer},
 	lastMove{0, 0},
 	winner{noWinner},
 	board{numColumns, numRows}
@@ -242,7 +242,7 @@ Board::player_size_t connectdisks::ConnectDisks::getNextPlayer() const noexcept
 	Board::player_size_t nextPlayer = currentPlayer + 1; // may overflow to 0
 	if (nextPlayer > numPlayers || nextPlayer == 0)
 	{
-		nextPlayer = firstPlayerId; // wrap around
+		nextPlayer = defaultFirstPlayer; // wrap around
 	}
 	return nextPlayer;
 }
