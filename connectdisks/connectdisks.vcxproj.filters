@@ -17,12 +17,24 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="testconnectdisks.cpp" />
+    <ClCompile Include="src\client.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\server.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\connectdisks\board.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\connectdisks\connectdisks.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\connectdisks\client.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\connectdisks\server.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
