@@ -5,26 +5,30 @@
 
 namespace connectdisks
 {
-	enum class ServerResponse : uint8_t
+	namespace server
 	{
-		error, connected, gameStart, gameEnd
-	};
+		enum class Response : uint8_t
+		{
+			error, connected, gameStart, gameEnd
+		};
+		struct Message
+		{
+			Response response;
+			std::array<uint8_t, 16> data;
+		};
+	}
 
-	struct ServerMessage
+	namespace client
 	{
-		ServerResponse response;
-		std::array<uint8_t, 16> data;
-	};
+		enum class Response : uint8_t
+		{
+			error, ready
+		};
 
-
-	enum class ClientResponse : uint8_t
-	{
-		error, ready
-	};
-
-	struct ClientMessage
-	{
-		ClientResponse response;
-		std::array<uint8_t, 16> data;
-	};
+		struct Message
+		{
+			Response response;
+			std::array<uint8_t, 16> data;
+		};
+	}
 }

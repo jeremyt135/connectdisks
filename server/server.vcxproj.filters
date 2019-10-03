@@ -18,6 +18,12 @@
     <ClInclude Include="..\include\connectdisks\messaging.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\connectdisks\gamelobby.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\connectdisks\connection.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\server.cpp">
@@ -29,6 +35,12 @@
     </ClCompile>
     <ClCompile Include="..\src\connectdisks.cpp">
       <Filter>connectdisks</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gamelobby.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\connection.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

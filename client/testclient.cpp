@@ -5,7 +5,7 @@
 #include <iostream>
 #include <thread>
 
-using namespace connectdisks;
+using connectdisks::client::Client;
 
 void runClient(int id)
 {

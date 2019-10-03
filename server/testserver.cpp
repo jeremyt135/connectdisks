@@ -5,7 +5,7 @@
 #include <iostream>
 #include <thread>
 
-using namespace connectdisks;
+using connectdisks::server::Server;
 
 void runServer()
 {

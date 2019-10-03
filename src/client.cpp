@@ -14,12 +14,14 @@
 using boost::asio::ip::address_v4;
 using boost::asio::ip::tcp;
 
-using namespace connectdisks;
+using namespace connectdisks::client;
+using connectdisks::Board;
+using connectdisks::ConnectDisks;
 
 using typeutil::toUnderlyingType;
 using typeutil::toScopedEnum;
 
-connectdisks::Client::Client(boost::asio::io_service & ioService, std::string address, uint16_t port)
+connectdisks::client::Client::Client(boost::asio::io_service & ioService, std::string address, uint16_t port)
 	:
 	isPlaying{false},
 	socket{ioService},
@@ -29,11 +31,11 @@ connectdisks::Client::Client(boost::asio::io_service & ioService, std::string ad
 	connectToServer(address, port);
 }
 
-connectdisks::Client::~Client()
+connectdisks::client::Client::~Client()
 {
 }
 
-void connectdisks::Client::connectToServer(std::string address, uint16_t port)
+void connectdisks::client::Client::connectToServer(std::string address, uint16_t port)
 {
 	try
 	{
@@ -50,15 +52,15 @@ void connectdisks::Client::connectToServer(std::string address, uint16_t port)
 	waitForMessages();
 }
 
-void connectdisks::Client::waitForMessages()
+void connectdisks::client::Client::waitForMessages()
 {
 #if defined DEBUG || defined _DEBUG
 	std::cerr << "Client " << this << " waiting for messages\n";
 #endif
 	// read message from server
-	std::shared_ptr<ServerMessage> message{new ServerMessage{}};
+	std::shared_ptr<server::Message> message{new server::Message{}};
 	boost::asio::async_read(socket,
-		boost::asio::buffer(message.get(), sizeof(ServerMessage)),
+		boost::asio::buffer(message.get(), sizeof(server::Message)),
 		std::bind(
 			&Client::handleRead,
 			this,
@@ -68,15 +70,15 @@ void connectdisks::Client::waitForMessages()
 		));
 }
 
-void connectdisks::Client::sendReady()
+void connectdisks::client::Client::sendReady()
 {
 	// tell server we're ready to play
-	std::shared_ptr<ClientMessage> message{new ClientMessage{}};
-	message->response = toScopedEnum<ClientResponse>::cast(
-		boost::endian::native_to_big(toUnderlyingType(ClientResponse::ready)));
+	std::shared_ptr<client::Message> message{new client::Message{}};
+	message->response = toScopedEnum<client::Response>::cast(
+		boost::endian::native_to_big(toUnderlyingType(client::Response::ready)));
 	message->data[0] = boost::endian::native_to_big(playerId);
 	boost::asio::async_write(socket,
-		boost::asio::buffer(message.get(), sizeof(ServerMessage)),
+		boost::asio::buffer(message.get(), sizeof(server::Message)),
 		std::bind(
 			&Client::handleWrite,
 			this,
@@ -86,7 +88,7 @@ void connectdisks::Client::sendReady()
 		));
 }
 
-void connectdisks::Client::handleConnection(const boost::system::error_code & error)
+void connectdisks::client::Client::handleConnection(const boost::system::error_code & error)
 {
 	if (!error.failed())
 	{
@@ -102,7 +104,7 @@ void connectdisks::Client::handleConnection(const boost::system::error_code & er
 	}
 }
 
-void connectdisks::Client::handleRead(std::shared_ptr<ServerMessage> message, const boost::system::error_code & error, size_t len)
+void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> message, const boost::system::error_code & error, size_t len)
 {
 	if (!error.failed())
 	{
@@ -116,21 +118,21 @@ void connectdisks::Client::handleRead(std::shared_ptr<ServerMessage> message, co
 		}
 
 		const auto response{
-			toScopedEnum<ServerResponse>::cast(
+			toScopedEnum<server::Response>::cast(
 				boost::endian::big_to_native(toUnderlyingType(message->response))
 			)
 		};
 
 		switch (response)
 		{
-		case ServerResponse::connected:
+		case server::Response::connected:
 			playerId = boost::endian::big_to_native(message->data[0]);
 		#if defined DEBUG || defined _DEBUG
 			std::cerr << "Client " << this << " id set to: " << static_cast<int>(playerId) << " \n";
 		#endif
 			sendReady();
 			break;
-		case ServerResponse::gameStart:
+		case server::Response::gameStart:
 		{
 			const auto numPlayers = boost::endian::big_to_native(message->data[0]);
 			const auto numCols = boost::endian::big_to_native(message->data[1]);
@@ -149,7 +151,7 @@ void connectdisks::Client::handleRead(std::shared_ptr<ServerMessage> message, co
 			}
 		}
 		break;
-		case ServerResponse::gameEnd:
+		case server::Response::gameEnd:
 		#if defined DEBUG || defined _DEBUG
 			std::cerr << "Client " << this << " is in a game that ended; returned to lobby\n";
 		#endif
@@ -181,7 +183,7 @@ void connectdisks::Client::handleRead(std::shared_ptr<ServerMessage> message, co
 	}
 }
 
-void connectdisks::Client::handleWrite(std::shared_ptr<ClientMessage> message, const boost::system::error_code & error, size_t len)
+void connectdisks::client::Client::handleWrite(std::shared_ptr<client::Message> message, const boost::system::error_code & error, size_t len)
 {
 	if (!error.failed())
 	{
@@ -197,17 +199,17 @@ void connectdisks::Client::handleWrite(std::shared_ptr<ClientMessage> message, c
 	}
 }
 
-bool connectdisks::Client::takeTurn(Board::board_size_t column)
+bool connectdisks::client::Client::takeTurn(Board::board_size_t column)
 {
 	return false;
 }
 
-const ConnectDisks * connectdisks::Client::getGame() const noexcept
+const ConnectDisks * connectdisks::client::Client::getGame() const noexcept
 {
 	return nullptr;
 }
 
-void connectdisks::Client::startPlaying()
+void connectdisks::client::Client::startPlaying()
 {
 #if defined DEBUG || defined _DEBUG
 	std::cerr << "Client " << this << " is playing\n";
@@ -215,7 +217,7 @@ void connectdisks::Client::startPlaying()
 	isPlaying = true;
 }
 
-void connectdisks::Client::stopPlaying()
+void connectdisks::client::Client::stopPlaying()
 {
 #if defined DEBUG || defined _DEBUG
 	std::cerr << "Client " << this << " has stopped playing\n";
@@ -223,12 +225,12 @@ void connectdisks::Client::stopPlaying()
 	isPlaying = false;
 }
 
-connectdisks::ServerMessage connectdisks::Client::sendTurnToServer(Board::board_size_t column)
+connectdisks::server::Message connectdisks::client::Client::sendTurnToServer(Board::board_size_t column)
 {
-	return ServerMessage{};
+	return server::Message{};
 }
 
-Board::player_size_t connectdisks::Client::getPlayerIdFromServer()
+Board::player_size_t connectdisks::client::Client::getPlayerIdFromServer()
 {
 	return 0;
 }
