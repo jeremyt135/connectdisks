@@ -287,5 +287,5 @@ bool connectdisks::Server::GameLobby::isEmptyInternal() const noexcept
 
 bool connectdisks::Server::GameLobby::isFullInternal() const noexcept
 {
-	return players.size() < maxPlayers;
+	return players.size() == maxPlayers;
 }
