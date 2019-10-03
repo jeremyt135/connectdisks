@@ -14,6 +14,8 @@
 
 namespace connectdisks
 {
+	struct ServerMessage;
+
 	// Accepts connections from clients wanting to play ConnectDisks 
 	// and manages game lobbies.
 	class Server
@@ -34,6 +36,7 @@ namespace connectdisks
 
 		void waitForConnections();
 		void acceptConnection(std::shared_ptr<Connection> connection, const boost::system::error_code& error);
+		void sendMessage(std::shared_ptr<ServerMessage> message, const  boost::system::error_code& error, size_t len);
 
 		boost::asio::io_service& ioService;
 		boost::asio::ip::tcp::acceptor acceptor;
@@ -43,7 +46,7 @@ namespace connectdisks
 
 	enum class ServerResponse : uint8_t
 	{
-		id
+		connected, id
 	};
 
 	struct ServerMessage

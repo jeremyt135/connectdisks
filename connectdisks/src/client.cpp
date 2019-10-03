@@ -49,33 +49,19 @@ bool connectdisks::Client::connectToServer(std::string address, uint16_t port)
 	}
 
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Client connected to server \n";
+	std::cerr << "Client " << this << " created socket \n";
 #endif
+
 	try
 	{
-		{
-		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client trying to request id from server \n";
-		#endif
-			ClientMessage message;
-			message.request = toScopedEnum<ClientRequest>::cast(
-				boost::endian::native_to_big(toUnderlyingType(ClientRequest::getId))
-			);
-			boost::asio::write(socket, boost::asio::buffer(&message, sizeof(ClientMessage)));
-		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client sent request to server server \n";
-		#endif
-		}
 
 		{
-		#if defined DEBUG || _DEBUG
-			std::cerr << "Client trying to get response from server\n";
-		#endif
-
+			// get the "connected" response from the server
 			ServerMessage message;
+
 			size_t len = boost::asio::read(socket, boost::asio::buffer(&message, sizeof(ServerMessage)));
 		#if defined DEBUG || _DEBUG
-			std::cerr << "Client read " << len << "bytes \n";
+			std::cerr << "Client " << this << "read " << len << "bytes \n";
 		#endif
 			if (len == 0)
 			{
@@ -88,7 +74,55 @@ bool connectdisks::Client::connectToServer(std::string address, uint16_t port)
 			};
 
 		#if defined DEBUG || _DEBUG
-			std::cout << "Client received response " <<
+			std::cout << "Client " << this << "received response " <<
+				static_cast<int>(toUnderlyingType(response))
+				<< "\n";
+		#endif
+
+			if (response == ServerResponse::connected)
+			{
+			#if defined DEBUG || _DEBUG
+				std::cout << "Client " << this << "connected to server\n";
+			#endif
+			}
+		}
+
+		{
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client " << this << " trying to request id from server \n";
+		#endif
+			ClientMessage message;
+			message.request = toScopedEnum<ClientRequest>::cast(
+				boost::endian::native_to_big(toUnderlyingType(ClientRequest::getId))
+			);
+			boost::asio::write(socket, boost::asio::buffer(&message, sizeof(ClientMessage)));
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client " << this << " sent request to server server \n";
+		#endif
+		}
+
+	#if defined DEBUG || _DEBUG
+		std::cerr << "Client " << this << "trying to get response from server \n";
+	#endif
+		{
+			ServerMessage message;
+
+			size_t len = boost::asio::read(socket, boost::asio::buffer(&message, sizeof(ServerMessage)));
+		#if defined DEBUG || _DEBUG
+			std::cerr << "Client " << this << "read " << len << "bytes \n";
+		#endif
+			if (len == 0)
+			{
+				return false;
+			}
+			const auto response{
+					toScopedEnum<ServerResponse>::cast(
+						boost::endian::big_to_native(toUnderlyingType(message.response))
+					)
+			};
+
+		#if defined DEBUG || _DEBUG
+			std::cout << "Client " << this << "received response " <<
 				static_cast<int>(toUnderlyingType(response))
 				<< "\n";
 		#endif
@@ -97,19 +131,22 @@ bool connectdisks::Client::connectToServer(std::string address, uint16_t port)
 			{
 				playerId = message.data[0];
 			#if defined DEBUG || _DEBUG
-				std::cout << "Client received id " <<
+				std::cout << "Client " << this << "received id " <<
 					static_cast<int>(boost::endian::big_to_native(message.data[0]))
 					<< "\n";
 			#endif
+				return playerId;
 			}
 		}
+
 	}
 	catch (std::exception& e)
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Client::connectToServer: couldn't read id: " << e.what() << "\n";
+		std::cerr << "Client " << this << "::connectToServer: couldn't read id: " << e.what() << "\n";
 	#endif
 	}
+
 
 	return playerId != 0;
 }
