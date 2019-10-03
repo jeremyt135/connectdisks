@@ -1,5 +1,15 @@
 #pragma once
 
+#if defined _WIN32
+#if defined CREATE_DLL
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT __declspec(dllimport)
+#endif
+#else
+#define EXPORT
+#endif 
+
 #include <limits>
 #include <vector>
 
@@ -28,7 +38,7 @@ namespace connectdisks
 		Board(Board&& board) noexcept;
 
 		~Board();
-		
+
 		// Move assigns from existing board: see move constructor for usability after move.
 		Board& operator=(Board&& board) noexcept;
 

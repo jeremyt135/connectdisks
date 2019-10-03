@@ -10,35 +10,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="testboard.cpp" />
-    <ClCompile Include="src\board.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\connectdisks.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="testconnectdisks.cpp" />
-    <ClCompile Include="src\client.cpp">
+    <ClCompile Include="..\src\board.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\server.cpp">
+    <ClCompile Include="..\src\connectdisks.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="testclientserver.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\connectdisks\board.hpp">
+    <ClInclude Include="..\include\connectdisks\board.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\connectdisks\connectdisks.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\connectdisks\client.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\connectdisks\server.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\type_utility.hpp">
+    <ClInclude Include="..\include\connectdisks\connectdisks.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

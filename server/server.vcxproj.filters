@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{c5384de8-570f-46ff-839b-707b79dc4319}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{6456470c-3d1f-48bc-8689-d878923b6947}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="connectdisks">
+      <UniqueIdentifier>{68ae8c88-6d0d-463c-9e2c-93d00ed17712}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\connectdisks\server.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\server.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="testserver.cpp" />
+    <ClCompile Include="..\src\board.cpp">
+      <Filter>connectdisks</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\connectdisks.cpp">
+      <Filter>connectdisks</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
