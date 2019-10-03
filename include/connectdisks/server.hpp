@@ -3,6 +3,8 @@
 #include "connectdisks/board.hpp"
 #include "connectdisks/connectdisks.hpp"
 
+#include "connectdisks/messaging.hpp"
+
 #include <boost/asio.hpp>
 
 #include <future>
@@ -14,8 +16,6 @@
 
 namespace connectdisks
 {
-	struct ServerMessage;
-
 	// Accepts connections from clients wanting to play ConnectDisks 
 	// and manages game lobbies.
 	class Server
@@ -31,31 +31,21 @@ namespace connectdisks
 		Server& operator=(const Server&) = delete;
 
 	private:
+		static constexpr Board::player_size_t maxLobbies{4};
+
 		class GameLobby; // Runs a ConnectDisks game
 		class Connection; // Maintains connection from client
 
 		void waitForConnections();
-		void acceptConnection(std::shared_ptr<Connection> connection, const boost::system::error_code& error);
-		void sendMessage(std::shared_ptr<ServerMessage> message, const  boost::system::error_code& error, size_t len);
+		void handleConnection(std::shared_ptr<Connection> connection, const boost::system::error_code& error);
+
+		mutable std::mutex lobbiesMutex;
 
 		boost::asio::io_service& ioService;
 		boost::asio::ip::tcp::acceptor acceptor;
 
 		std::vector<std::unique_ptr<GameLobby>> lobbies;
 	};
-
-	enum class ServerResponse : uint8_t
-	{
-		connected, id
-	};
-
-	struct ServerMessage
-	{
-		ServerResponse response;
-		std::array<uint8_t, 3> data;
-	};
-
-	struct ClientMessage;
 
 	// Runs a ConnectDisks game
 	class Server::GameLobby
@@ -75,23 +65,35 @@ namespace connectdisks
 
 		// Returns true if the max number of players are connected
 		bool isFull() const noexcept;
+
+		Board::player_size_t getNumPlayers() const noexcept;
+
+		ConnectDisks* getGame() const noexcept;
+
+		// TODO - Finalize signal/slot for Connection ending and being removed from lobby
+		void onDisconnect(std::shared_ptr<Server::Connection> connection);
+
+		// TODO - Finalize signal/slot interface
+		void onReady(std::shared_ptr<Server::Connection> connection);
 	private:
-		void startGame(); // signal the start of a game
-		void startLobby(); // start the lobby and wait for players
+		void startGame(); 
+		void stopGame();
+		void startLobby(); 
 
 		bool isEmptyInternal() const noexcept;
 		bool isFullInternal() const noexcept;
+		bool allPlayersAreReady() const noexcept;
 
-		std::future<void> lobby;
-		std::atomic<bool> shouldClose;
+		std::atomic<bool> lobbyIsOpen;
+		std::atomic<bool> isPlayingGame;
 		std::atomic<bool> canAddPlayers;
 
 		mutable std::mutex playersMutex;
 
-		std::promise<void> startGameSignal;
-
 		std::unique_ptr<ConnectDisks> game;
 		Board::player_size_t maxPlayers;
+		Board::player_size_t nextId;
+		Board::player_size_t numReady;
 		std::vector<std::shared_ptr<Connection>> players;
 	};
 
@@ -99,7 +101,12 @@ namespace connectdisks
 	class Server::Connection : public std::enable_shared_from_this<Server::Connection>
 	{
 	public:
-		static std::shared_ptr<Server::Connection> create(boost::asio::io_service& ioService);
+		// TODO - Finalize passing method/subscription for disconnecting from lobby
+		static std::shared_ptr<Server::Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
+
+		// TODO - Finalize passing method/subscription for disconnecting from lobby
+		void onGameStart();
+		void onGameEnd();
 
 		// Starts an async read from the socket
 		void waitForMessages();
@@ -107,15 +114,25 @@ namespace connectdisks
 		// Sets the id that the player should have
 		void setId(Board::player_size_t id);
 
+		Board::player_size_t getId() const noexcept;
+
+		// Sets the GameLobby that this is connected to
+		void setGameLobby(GameLobby* lobby);
+
 		boost::asio::ip::tcp::socket& getSocket();
 	private:
-		Connection(boost::asio::io_service& ioService);
+		Connection(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
 		// Handles messages from the client on other end of connection
-		void readMessage(std::shared_ptr<ClientMessage> message, const boost::system::error_code& error, size_t len);
+		void handleRead(std::shared_ptr<ClientMessage> message, const boost::system::error_code& error, size_t len);
 
 		// Sends message to client
-		void sendMessage(std::shared_ptr<ServerMessage> message, const  boost::system::error_code& error, size_t len);
+		void handleWrite(std::shared_ptr<ServerMessage> message, const  boost::system::error_code& error, size_t len);
+
+		void handleDisconnect();
+		void handleClientReady();
+		
+		GameLobby* lobby;
 
 		boost::asio::ip::tcp::socket socket;
 		Board::player_size_t id;

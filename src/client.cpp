@@ -20,21 +20,20 @@ using typeutil::toUnderlyingType;
 using typeutil::toScopedEnum;
 
 connectdisks::Client::Client(boost::asio::io_service & ioService, std::string address, uint16_t port)
-	: socket{ioService},
+	:
+	isPlaying{false},
+	socket{ioService},
 	playerId{0},
 	game{nullptr}
 {
-	if (!connectToServer(address, port))
-	{
-		throw std::runtime_error("Client::Client: failed to connect to server");
-	}
+	connectToServer(address, port);
 }
 
 connectdisks::Client::~Client()
 {
 }
 
-bool connectdisks::Client::connectToServer(std::string address, uint16_t port)
+void connectdisks::Client::connectToServer(std::string address, uint16_t port)
 {
 	try
 	{
@@ -45,121 +44,183 @@ bool connectdisks::Client::connectToServer(std::string address, uint16_t port)
 	#if defined DEBUG || _DEBUG
 		std::cerr << "Client::connectToServer: " << e.what() << "\n";
 	#endif
-		return false;
+		throw;
 	}
 
+	waitForMessages();
+}
+
+void connectdisks::Client::waitForMessages()
+{
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Client " << this << " created socket \n";
+	std::cerr << "Client " << this << " waiting for messages\n";
 #endif
+	// read message from server
+	std::shared_ptr<ServerMessage> message{new ServerMessage{}};
+	boost::asio::async_read(socket,
+		boost::asio::buffer(message.get(), sizeof(ServerMessage)),
+		std::bind(
+			&Client::handleRead,
+			this,
+			message,
+			std::placeholders::_1,
+			std::placeholders::_2
+		));
+}
 
-	try
-	{
+void connectdisks::Client::sendReady()
+{
+	// tell server we're ready to play
+	std::shared_ptr<ClientMessage> message{new ClientMessage{}};
+	message->response = toScopedEnum<ClientResponse>::cast(
+		boost::endian::native_to_big(toUnderlyingType(ClientResponse::ready)));
+	message->data[0] = boost::endian::native_to_big(playerId);
+	boost::asio::async_write(socket,
+		boost::asio::buffer(message.get(), sizeof(ServerMessage)),
+		std::bind(
+			&Client::handleWrite,
+			this,
+			message,
+			std::placeholders::_1,
+			std::placeholders::_2
+		));
+}
 
-		{
-			// get the "connected" response from the server
-			ServerMessage message;
-
-			size_t len = boost::asio::read(socket, boost::asio::buffer(&message, sizeof(ServerMessage)));
-		#if defined DEBUG || _DEBUG
-			std::cerr << "Client " << this << "read " << len << "bytes \n";
-		#endif
-			if (len == 0)
-			{
-				return false;
-			}
-			const auto response{
-					toScopedEnum<ServerResponse>::cast(
-						boost::endian::big_to_native(toUnderlyingType(message.response))
-					)
-			};
-
-		#if defined DEBUG || _DEBUG
-			std::cout << "Client " << this << "received response " <<
-				static_cast<int>(toUnderlyingType(response))
-				<< "\n";
-		#endif
-
-			if (response == ServerResponse::connected)
-			{
-			#if defined DEBUG || _DEBUG
-				std::cout << "Client " << this << "connected to server\n";
-			#endif
-			}
-		}
-
-		{
-		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client " << this << " trying to request id from server \n";
-		#endif
-			ClientMessage message;
-			message.request = toScopedEnum<ClientRequest>::cast(
-				boost::endian::native_to_big(toUnderlyingType(ClientRequest::getId))
-			);
-			boost::asio::write(socket, boost::asio::buffer(&message, sizeof(ClientMessage)));
-		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client " << this << " sent request to server server \n";
-		#endif
-		}
-
-	#if defined DEBUG || _DEBUG
-		std::cerr << "Client " << this << "trying to get response from server \n";
-	#endif
-		{
-			ServerMessage message;
-
-			size_t len = boost::asio::read(socket, boost::asio::buffer(&message, sizeof(ServerMessage)));
-		#if defined DEBUG || _DEBUG
-			std::cerr << "Client " << this << "read " << len << "bytes \n";
-		#endif
-			if (len == 0)
-			{
-				return false;
-			}
-			const auto response{
-					toScopedEnum<ServerResponse>::cast(
-						boost::endian::big_to_native(toUnderlyingType(message.response))
-					)
-			};
-
-		#if defined DEBUG || _DEBUG
-			std::cout << "Client " << this << "received response " <<
-				static_cast<int>(toUnderlyingType(response))
-				<< "\n";
-		#endif
-
-			if (response == ServerResponse::id)
-			{
-				playerId = message.data[0];
-			#if defined DEBUG || _DEBUG
-				std::cout << "Client " << this << "received id " <<
-					static_cast<int>(boost::endian::big_to_native(message.data[0]))
-					<< "\n";
-			#endif
-				return playerId;
-			}
-		}
-
-	}
-	catch (std::exception& e)
+void connectdisks::Client::handleConnection(const boost::system::error_code & error)
+{
+	if (!error.failed())
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Client " << this << "::connectToServer: couldn't read id: " << e.what() << "\n";
+		std::cerr << "Client " << this << " connected \n";
 	#endif
 	}
+	else
+	{
+	#if defined DEBUG || defined _DEBUG
+		std::cerr << "Client " << this << " failed to connect\n";
+	#endif
+	}
+}
 
+void connectdisks::Client::handleRead(std::shared_ptr<ServerMessage> message, const boost::system::error_code & error, size_t len)
+{
+	if (!error.failed())
+	{
+	#if defined DEBUG || defined _DEBUG
+		std::cerr << "Client " << this << " received message \n";
+	#endif
 
-	return playerId != 0;
+		if (len == 0)
+		{
+			return;
+		}
+
+		const auto response{
+			toScopedEnum<ServerResponse>::cast(
+				boost::endian::big_to_native(toUnderlyingType(message->response))
+			)
+		};
+
+		switch (response)
+		{
+		case ServerResponse::connected:
+			playerId = boost::endian::big_to_native(message->data[0]);
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client " << this << " id set to: " << static_cast<int>(playerId) << " \n";
+		#endif
+			sendReady();
+			break;
+		case ServerResponse::gameStart:
+		{
+			const auto numPlayers = boost::endian::big_to_native(message->data[0]);
+			const auto numCols = boost::endian::big_to_native(message->data[1]);
+			const auto numRows = boost::endian::big_to_native(message->data[2]);
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client " << this << " is in a lobby that has started playing with "
+				<< static_cast<int>(numPlayers) << " players\n";
+			std::cerr << "Board size is set to cols=" << static_cast<int>(numCols) << ", rows=" <<
+				static_cast<int>(numRows) << "\n";
+		#endif
+			// ignore if already playing
+			if (!isPlaying)
+			{
+				game.reset(new ConnectDisks{numPlayers, 1, numCols, numRows});
+				startPlaying();
+			}
+		}
+		break;
+		case ServerResponse::gameEnd:
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client " << this << " is in a game that ended; returned to lobby\n";
+		#endif
+			stopPlaying();
+			break;
+		default:
+			break;
+		}
+
+		waitForMessages();
+	}
+	else
+	{
+		switch (error.value())
+		{
+		case boost::asio::error::eof:
+		case boost::asio::error::connection_aborted:
+		case boost::asio::error::connection_reset:
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client " << this << "::handleRead: connection ended \n";
+		#endif
+			break;
+		default:
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client " << this << "::handleRead: " << error.message() << "\n";
+		#endif
+			break;
+		}
+	}
+}
+
+void connectdisks::Client::handleWrite(std::shared_ptr<ClientMessage> message, const boost::system::error_code & error, size_t len)
+{
+	if (!error.failed())
+	{
+	#if defined DEBUG || defined _DEBUG
+		std::cerr << "Sent message to server\n";
+	#endif
+	}
+	else
+	{
+	#if defined DEBUG || defined _DEBUG
+		std::cerr << "Client::handleWrite: " << error.message() << "\n";
+	#endif
+	}
 }
 
 bool connectdisks::Client::takeTurn(Board::board_size_t column)
 {
-
 	return false;
 }
 
 const ConnectDisks * connectdisks::Client::getGame() const noexcept
 {
 	return nullptr;
+}
+
+void connectdisks::Client::startPlaying()
+{
+#if defined DEBUG || defined _DEBUG
+	std::cerr << "Client " << this << " is playing\n";
+#endif
+	isPlaying = true;
+}
+
+void connectdisks::Client::stopPlaying()
+{
+#if defined DEBUG || defined _DEBUG
+	std::cerr << "Client " << this << " has stopped playing\n";
+#endif
+	isPlaying = false;
 }
 
 connectdisks::ServerMessage connectdisks::Client::sendTurnToServer(Board::board_size_t column)

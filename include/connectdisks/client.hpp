@@ -3,16 +3,17 @@
 #include "connectdisks/board.hpp"
 #include "connectdisks/connectdisks.hpp"
 
-#include <memory>
-#include <string>
+#include "connectdisks/messaging.hpp"
 
 #include <boost/asio.hpp>
 
+#include <memory>
+#include <string>
+
 namespace connectdisks
 {
-	enum class ClientRequest : uint8_t;
-	struct ServerMessage;
 
+	// TODO - MAKE ASYNC
 	class Client
 	{
 	public:
@@ -32,25 +33,27 @@ namespace connectdisks
 		const ConnectDisks* getGame() const noexcept;
 	private:
 		// Connects to a ConnectDisks game server
-		bool connectToServer(std::string address, uint16_t port);
+		void connectToServer(std::string address, uint16_t port);
+
+		void waitForMessages();
+		void sendReady();
+
+		void handleConnection(const boost::system::error_code& error);
+		void handleRead(std::shared_ptr<ServerMessage> message, const boost::system::error_code& error, size_t len);
+		void handleWrite(std::shared_ptr<ClientMessage> message, const boost::system::error_code& error, size_t len);
+
+		// TODO - create hooks into game loop to allow user of Client to take turns, etc
+		void startPlaying();
+		void stopPlaying();
 
 		ServerMessage sendTurnToServer(Board::board_size_t column);
 		Board::player_size_t getPlayerIdFromServer();
+
+		std::atomic<bool> isPlaying;
 
 		boost::asio::ip::tcp::socket socket;
 
 		Board::player_size_t playerId;
 		std::unique_ptr<ConnectDisks> game;
-	};
-
-	enum class ClientRequest : uint8_t
-	{
-		getId, takeTurn
-	};
-
-	struct ClientMessage
-	{
-		ClientRequest request;
-		std::array<uint8_t, 3> data;
 	};
 }

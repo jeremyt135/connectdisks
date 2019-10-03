@@ -15,6 +15,9 @@
     <ClInclude Include="..\include\connectdisks\server.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\connectdisks\messaging.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\server.cpp">
