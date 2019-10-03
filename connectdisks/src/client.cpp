@@ -2,6 +2,8 @@
 
 #include "connectdisks/server.hpp"
 
+#include "type_utility.hpp"
+
 #include <boost/endian/arithmetic.hpp>
 #include <boost/endian/conversion.hpp>
 
@@ -9,14 +11,23 @@
 #include <iostream>
 #include <thread>
 
-using namespace connectdisks;
+using boost::asio::ip::address_v4;
 using boost::asio::ip::tcp;
 
-connectdisks::Client::Client(boost::asio::io_service & context) : 
-	socket{context}, 
+using namespace connectdisks;
+
+using typeutil::toUnderlyingType;
+using typeutil::toScopedEnum;
+
+connectdisks::Client::Client(boost::asio::io_service & ioService, std::string address, uint16_t port)
+	: socket{ioService},
 	playerId{0},
 	game{nullptr}
 {
+	if (!connectToServer(address, port))
+	{
+		throw std::runtime_error("Client::Client: failed to connect to server");
+	}
 }
 
 connectdisks::Client::~Client()
@@ -25,6 +36,81 @@ connectdisks::Client::~Client()
 
 bool connectdisks::Client::connectToServer(std::string address, uint16_t port)
 {
+	try
+	{
+		socket.connect(tcp::endpoint{address_v4::from_string(address), port});
+	}
+	catch (std::exception& e)
+	{
+	#if defined DEBUG || _DEBUG
+		std::cerr << "Client::connectToServer: " << e.what() << "\n";
+	#endif
+		return false;
+	}
+
+#if defined DEBUG || defined _DEBUG
+	std::cerr << "Client connected to server \n";
+#endif
+	try
+	{
+		{
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client trying to request id from server \n";
+		#endif
+			ClientMessage message;
+			message.request = toScopedEnum<ClientRequest>::cast(
+				boost::endian::native_to_big(toUnderlyingType(ClientRequest::getId))
+			);
+			boost::asio::write(socket, boost::asio::buffer(&message, sizeof(ClientMessage)));
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Client sent request to server server \n";
+		#endif
+		}
+
+		{
+		#if defined DEBUG || _DEBUG
+			std::cerr << "Client trying to get response from server\n";
+		#endif
+
+			ServerMessage message;
+			size_t len = boost::asio::read(socket, boost::asio::buffer(&message, sizeof(ServerMessage)));
+		#if defined DEBUG || _DEBUG
+			std::cerr << "Client read " << len << "bytes \n";
+		#endif
+			if (len == 0)
+			{
+				return false;
+			}
+			const auto response{
+					toScopedEnum<ServerResponse>::cast(
+						boost::endian::big_to_native(toUnderlyingType(message.response))
+					)
+			};
+
+		#if defined DEBUG || _DEBUG
+			std::cout << "Client received response " <<
+				static_cast<int>(toUnderlyingType(response))
+				<< "\n";
+		#endif
+
+			if (response == ServerResponse::id)
+			{
+				playerId = message.data[0];
+			#if defined DEBUG || _DEBUG
+				std::cout << "Client received id " <<
+					static_cast<int>(boost::endian::big_to_native(message.data[0]))
+					<< "\n";
+			#endif
+			}
+		}
+	}
+	catch (std::exception& e)
+	{
+	#if defined DEBUG || defined _DEBUG
+		std::cerr << "Client::connectToServer: couldn't read id: " << e.what() << "\n";
+	#endif
+	}
+
 	return playerId != 0;
 }
 

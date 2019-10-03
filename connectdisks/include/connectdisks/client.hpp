@@ -10,27 +10,30 @@
 
 namespace connectdisks
 {
+	enum class ClientRequest : uint8_t;
 	struct ServerMessage;
 
 	class Client
 	{
 	public:
-		enum class Request : uint8_t;
 
-		Client(boost::asio::io_service& context);
+		Client(
+			boost::asio::io_service& ioService,
+			std::string address,
+			uint16_t port);
 		Client(const Client&) = delete;
 		~Client();
 
 		Client& operator=(const Client&) = delete;
-
-		// Connects to a ConnectDisks game server
-		bool connectToServer(std::string address, uint16_t port);
 
 		// Attempts to take a turn in the given column
 		bool takeTurn(Board::board_size_t column);
 
 		const ConnectDisks* getGame() const noexcept;
 	private:
+		// Connects to a ConnectDisks game server
+		bool connectToServer(std::string address, uint16_t port);
+
 		ServerMessage sendTurnToServer(Board::board_size_t column);
 		Board::player_size_t getPlayerIdFromServer();
 
@@ -40,14 +43,14 @@ namespace connectdisks
 		std::unique_ptr<ConnectDisks> game;
 	};
 
-	enum class Client::Request : uint8_t
+	enum class ClientRequest : uint8_t
 	{
 		getId, takeTurn
 	};
 
 	struct ClientMessage
 	{
-		Client::Request request;
+		ClientRequest request;
 		std::array<uint8_t, 3> data;
 	};
 }

@@ -19,8 +19,6 @@ namespace connectdisks
 	class Server
 	{
 	public:
-		enum class Response : uint8_t;
-
 		Server(
 			boost::asio::io_service& ioService,
 			std::string address, 
@@ -43,16 +41,18 @@ namespace connectdisks
 		std::vector<std::unique_ptr<GameLobby>> lobbies;
 	};
 
-	enum class Server::Response : uint8_t
+	enum class ServerResponse : uint8_t
 	{
-
+		id
 	};
 
 	struct ServerMessage
 	{
-		Server::Response response;
+		ServerResponse response;
 		std::array<uint8_t, 3> data;
 	};
+
+	struct ClientMessage;
 
 	// Runs a ConnectDisks game
 	class Server::GameLobby
@@ -92,8 +92,6 @@ namespace connectdisks
 		std::vector<std::shared_ptr<Connection>> players;
 	};
 
-	struct ClientMessage;
-
 	// Maintains connection from clients
 	class Server::Connection : public std::enable_shared_from_this<Server::Connection>
 	{
@@ -113,9 +111,12 @@ namespace connectdisks
 		// Handles messages from the client on other end of connection
 		void readMessage(std::shared_ptr<ClientMessage> message, const boost::system::error_code& error, size_t len);
 
+		// Sends message to client
+		void sendMessage(std::shared_ptr<ServerMessage> message, const  boost::system::error_code& error, size_t len);
+
 		boost::asio::ip::tcp::socket socket;
 		Board::player_size_t id;
 	};
 
-	
+
 }

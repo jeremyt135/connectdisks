@@ -2,6 +2,8 @@
 
 #include "connectdisks/client.hpp"
 
+#include "type_utility.hpp"
+
 #include <boost/endian/arithmetic.hpp>
 #include <boost/endian/conversion.hpp>
 
@@ -9,10 +11,13 @@
 #include <iostream>
 #include <functional>
 
-using namespace connectdisks;
-
 using boost::asio::ip::address_v4;
 using boost::asio::ip::tcp;
+
+using namespace connectdisks;
+
+using typeutil::toUnderlyingType;
+using typeutil::toScopedEnum;
 
 connectdisks::Server::Server(
 	boost::asio::io_service & ioService, 
@@ -30,6 +35,9 @@ connectdisks::Server::~Server()
 
 void connectdisks::Server::waitForConnections()
 {
+#if defined DEBUG || defined _DEBUG
+	std::cerr << "Server waiting for connections\n";
+#endif
 	std::shared_ptr<Connection> connection{Connection::create(ioService)};
 
 	acceptor.async_accept(
@@ -41,11 +49,20 @@ void connectdisks::Server::waitForConnections()
 
 void connectdisks::Server::acceptConnection(std::shared_ptr<Connection> connection, const boost::system::error_code & error)
 {
+#if defined DEBUG || defined _DEBUG
+	std::cerr << "Server trying to accept connection\n";
+#endif
 	if (!error.failed())
 	{
+	#if defined DEBUG || defined _DEBUG
+		std::cerr << "Server accepted connection \n";
+	#endif
 		// assign connection to an existing lobby if one exists
 		if (!lobbies.empty())
 		{
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Lobbies exist already\n";
+		#endif
 			auto lobby = std::find_if(
 				lobbies.begin(),
 				lobbies.end(),
@@ -61,17 +78,17 @@ void connectdisks::Server::acceptConnection(std::shared_ptr<Connection> connecti
 				auto gameLobby = lobby->get();
 				gameLobby->addPlayer(connection);
 			}
-			else
-			{
-			#if defined DEBUG || defined _DEBUG
-				std::cout << "Making new lobby and adding player\n";
-			#endif
-				// make a new lobby
-				lobbies.emplace_back(new GameLobby{});
-				auto gameLobby = lobby->get();
-				gameLobby->addPlayer(connection);
-				gameLobby->start();
-			}
+		}
+		else
+		{
+		#if defined DEBUG || defined _DEBUG
+			std::cout << "Making new lobby and adding player\n";
+		#endif
+			// make a new lobby
+			lobbies.emplace_back(new GameLobby{});
+			auto& gameLobby = lobbies.back();
+			gameLobby->addPlayer(connection);
+			gameLobby->start();
 		}
 	}
 	else{
@@ -90,6 +107,13 @@ std::shared_ptr<Server::Connection> connectdisks::Server::Connection::create(boo
 
 void connectdisks::Server::Connection::waitForMessages()
 {
+#if defined DEBUG || defined _DEBUG
+	std::cerr << "Connection waiting for messages\n";
+#endif
+	
+	auto dataAvailableSignal = std::async([this](){ while (!socket.available()) {}});
+	dataAvailableSignal.wait();
+
 	// read a message from the client, handle in readMessage
 	std::shared_ptr<ClientMessage> message{new ClientMessage{}};
 	boost::asio::async_read(socket,
@@ -122,16 +146,70 @@ connectdisks::Server::Connection::Connection(boost::asio::io_service & ioService
 {
 }
 
-void connectdisks::Server::Connection::readMessage(std::shared_ptr<ClientMessage> message, const boost::system::error_code & error, size_t len)
+void connectdisks::Server::Connection::readMessage(std::shared_ptr<connectdisks::ClientMessage> message, const boost::system::error_code & error, size_t len)
+{
+#if defined DEBUG || defined _DEBUG
+	std::cerr << "Connection trying to read message\n";
+#endif
+	if (!error.failed())
+	{
+		if (len == 0)
+		{
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Connection received 0 length message\n";
+		#endif
+			return;
+		}
+
+		const auto request{
+			toScopedEnum<ClientRequest>::cast(
+				boost::endian::big_to_native(toUnderlyingType(message->request))
+			)
+		};
+		if (request == ClientRequest::getId)
+		{
+		#if defined DEBUG || defined _DEBUG
+			std::cout << "Client asked for id\n";
+		#endif
+			std::shared_ptr<ServerMessage> response{new ServerMessage{}};
+			response->response = toScopedEnum<ServerResponse>::cast(boost::endian::native_to_big(toUnderlyingType(ServerResponse::id)));
+			response->data[0] = boost::endian::native_to_big(id);
+			boost::asio::async_write(socket,
+				boost::asio::buffer(response.get(), sizeof(ServerMessage)),
+				std::bind(
+					&Connection::sendMessage,
+					this,
+					response,
+					std::placeholders::_1,
+					std::placeholders::_2
+				));
+		}
+	}
+	else
+	{
+		if (error != boost::asio::error::eof)
+		{
+		#if defined DEBUG || defined _DEBUG
+			std::cerr << "Connection::readMessage: " << error.message() << "\n";
+		#endif
+		}
+	}
+
+	waitForMessages();
+}
+
+void connectdisks::Server::Connection::sendMessage(std::shared_ptr<ServerMessage> message, const boost::system::error_code & error, size_t len)
 {
 	if (!error.failed())
 	{
-
+	#if defined DEBUG || defined _DEBUG
+		std::cerr << "Sent message to client\n";
+	#endif
 	}
 	else
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Connection::readMessage: " << error.message() << "\n";
+		std::cerr << "Connection::sendMessage: " << error.message() << "\n";
 	#endif
 	}
 }
@@ -190,6 +268,10 @@ bool connectdisks::Server::GameLobby::isFull() const noexcept
 void connectdisks::Server::GameLobby::startLobby()
 {
 	startGameSignal.get_future().wait();
+
+#if defined DEBUG || defined _DEBUG
+	std::cout << "GameLobby " << this << " has started playing\n";
+#endif
 
 	// start playing game
 	while (!shouldClose)

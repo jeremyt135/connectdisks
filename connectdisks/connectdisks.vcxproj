@@ -26,13 +26,17 @@
     <ClCompile Include="testboard.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="testconnectdisks.cpp" />
+    <ClCompile Include="testclientserver.cpp" />
+    <ClCompile Include="testconnectdisks.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\connectdisks\board.hpp" />
     <ClInclude Include="include\connectdisks\client.hpp" />
     <ClInclude Include="include\connectdisks\connectdisks.hpp" />
     <ClInclude Include="include\connectdisks\server.hpp" />
+    <ClInclude Include="include\type_utility.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
