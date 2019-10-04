@@ -24,7 +24,12 @@ namespace connectdisks
 		{
 		public:
 			GameLobby(Board::player_size_t maxPlayers = ConnectDisks::minNumPlayers);
+
+			GameLobby(const GameLobby&) = delete;
+
 			~GameLobby();
+
+			GameLobby& operator=(const GameLobby&) = delete;
 
 			// Starts the lobby and waits for enough players to start a game
 			void start();
