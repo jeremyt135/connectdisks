@@ -9,7 +9,7 @@ namespace connectdisks
 	{
 		enum class Response : uint8_t
 		{
-			error, connected, gameStart, gameEnd
+			error, connected, gameStart, gameEnd, takeTurn, turnResult, update
 		};
 		struct Message
 		{
@@ -22,7 +22,7 @@ namespace connectdisks
 	{
 		enum class Response : uint8_t
 		{
-			error, ready
+			error, ready, turn
 		};
 
 		struct Message

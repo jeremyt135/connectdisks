@@ -49,7 +49,7 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 	std::lock_guard<std::mutex> lock{playersMutex};
 	size_t prevSize = players.size();
 	players.erase(std::remove_if(players.begin(), players.end(),
-		[&connection](std::shared_ptr<Connection>& con){ return con->getId() == connection->getId(); }));
+		[connection](std::shared_ptr<Connection> con){ return con->getId() == connection->getId(); }));
 
 	if (players.size() != prevSize)
 	{
@@ -75,7 +75,7 @@ void connectdisks::server::GameLobby::onReady(std::shared_ptr<Connection> connec
 {
 	std::unique_lock<std::mutex> lock{playersMutex};
 	auto player = std::find_if(players.begin(), players.end(),
-		[&connection](std::shared_ptr<Connection>& con){
+		[connection](std::shared_ptr<Connection> con){
 			return con->getId() == connection->getId();
 		});
 	if (player != players.end())
@@ -92,6 +92,54 @@ void connectdisks::server::GameLobby::onReady(std::shared_ptr<Connection> connec
 	}
 }
 
+ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared_ptr<Connection> connection, Board::board_size_t column)
+{
+	try
+	{
+		const auto result = game->takeTurn(connection->getId(), column);
+		switch (result)
+		{
+		case ConnectDisks::TurnResult::success:
+		{
+			// tell other clients that there was a move
+			std::lock_guard<std::mutex> lock{playersMutex};
+			std::for_each(players.begin(), players.end(),
+				[connection, column, result, this](std::shared_ptr<Connection> otherConnection){
+					if (connection->getId() != otherConnection->getId())
+					{
+						otherConnection->onUpdate(otherConnection->getId(), column);
+					}
+					if (game->hasWinner())
+					{
+						otherConnection->onGameEnd(game->getWinner());
+					}
+					else if (otherConnection->getId() == game->getCurrentPlayer())
+					{
+						// tell the next player it's their turn
+						otherConnection->onTurn();
+					}
+				});
+			if (game->hasWinner())
+			{
+				onGameOver();
+			}
+		}
+		break;
+		default:
+			break;
+		}
+		return result;
+	}
+	catch (std::exception& e)
+	{
+	#if defined DEBUG || defined _DEBUG
+		std::cout << "GameLobby " << this << " error taking turn " << e.what() << "\n";
+	#endif
+	}
+
+	return ConnectDisks::TurnResult::error;
+}
+
 void connectdisks::server::GameLobby::startGame()
 {
 	// clumsy - fix with atomic memory order
@@ -104,6 +152,10 @@ void connectdisks::server::GameLobby::startGame()
 	for (auto& player : players)
 	{
 		player->onGameStart();
+		if (player->getId() == game->getCurrentPlayer())
+		{
+			player->onTurn();
+		}
 	}
 }
 
@@ -116,7 +168,7 @@ void connectdisks::server::GameLobby::stopGame()
 	isPlayingGame = false;
 	for (auto& player : players)
 	{
-		player->onGameEnd();
+		player->onGameEnd(0);
 	}
 }
 
@@ -158,6 +210,12 @@ void connectdisks::server::GameLobby::startLobby()
 #if defined DEBUG || defined _DEBUG
 	std::cout << "GameLobby " << this << " has started\n";
 #endif
+}
+
+void connectdisks::server::GameLobby::onGameOver()
+{
+	// no longer playing a game but do not tell players game is over again
+	isPlayingGame = false;
 }
 
 bool connectdisks::server::GameLobby::isEmptyInternal() const noexcept

@@ -49,13 +49,15 @@ namespace connectdisks
 
 			// TODO - Finalize signal/slot for Connection ending and being removed from lobby
 			void onDisconnect(std::shared_ptr<Connection> connection);
-
-			// TODO - Finalize signal/slot interface
 			void onReady(std::shared_ptr<Connection> connection);
+			ConnectDisks::TurnResult onTakeTurn(std::shared_ptr<Connection> connection, Board::board_size_t column);
+
 		private:
 			void startGame();
 			void stopGame();
 			void startLobby();
+
+			void onGameOver();
 
 			bool isEmptyInternal() const noexcept;
 			bool isFullInternal() const noexcept;

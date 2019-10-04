@@ -52,12 +52,49 @@ void connectdisks::server::Connection::onGameStart()
 		));
 }
 
-void connectdisks::server::Connection::onGameEnd()
+void connectdisks::server::Connection::onGameEnd(Board::player_size_t player)
 {
 	// tell client game has ended
 	std::shared_ptr<server::Message> response{new server::Message{}};
 	response->response = toScopedEnum<server::Response>::cast(
 		boost::endian::native_to_big(toUnderlyingType(server::Response::gameEnd)));
+	response->data[0] = boost::endian::native_to_big(player);
+	boost::asio::async_write(socket,
+		boost::asio::buffer(response.get(), sizeof(server::Message)),
+		std::bind(
+			&Connection::handleWrite,
+			this,
+			response,
+			std::placeholders::_1,
+			std::placeholders::_2
+		));
+}
+
+void connectdisks::server::Connection::onTurn()
+{
+	// tell client it's their turn
+	std::shared_ptr<server::Message> response{new server::Message{}};
+	response->response = toScopedEnum<server::Response>::cast(
+		boost::endian::native_to_big(toUnderlyingType(server::Response::takeTurn)));
+	boost::asio::async_write(socket,
+		boost::asio::buffer(response.get(), sizeof(server::Message)),
+		std::bind(
+			&Connection::handleWrite,
+			this,
+			response,
+			std::placeholders::_1,
+			std::placeholders::_2
+		));
+}
+
+void connectdisks::server::Connection::onUpdate(Board::player_size_t player, Board::board_size_t col)
+{
+	// tell client that a successful turn was taken
+	std::shared_ptr<server::Message> response{new server::Message{}};
+	response->response = toScopedEnum<server::Response>::cast(
+		boost::endian::native_to_big(toUnderlyingType(server::Response::update)));
+	response->data[0] = boost::endian::native_to_big(player);
+	response->data[1] = boost::endian::native_to_big(col);
 	boost::asio::async_write(socket,
 		boost::asio::buffer(response.get(), sizeof(server::Message)),
 		std::bind(
@@ -153,13 +190,27 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 				boost::endian::big_to_native(toUnderlyingType(message->response))
 			)
 		};
-		if (request == client::Response::ready)
+		switch (request)
 		{
+		case client::Response::ready:
 		#if defined DEBUG || defined _DEBUG
 			std::cout << "Connection " << this << ": Client is ready\n";
 		#endif
 			handleClientReady();
+			break;
+		case client::Response::turn:
+		{
+			const auto column{
+				boost::endian::big_to_native(message->data[0])
+			};
+			const auto result = lobby->onTakeTurn(shared_from_this(), column);
+			handleTurnResult(result);
 		}
+			break;
+		default:
+			break;
+		}
+
 		waitForMessages();
 	}
 	else
@@ -208,4 +259,22 @@ void connectdisks::server::Connection::handleDisconnect()
 void connectdisks::server::Connection::handleClientReady()
 {
 	lobby->onReady(shared_from_this());
+}
+
+void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult result)
+{
+	// send turn result
+	std::shared_ptr<server::Message> response{new server::Message{}};
+	response->response = toScopedEnum<server::Response>::cast(
+		boost::endian::native_to_big(toUnderlyingType(server::Response::turnResult)));
+	response->data[0] = boost::endian::native_to_big(toUnderlyingType(result));
+	boost::asio::async_write(socket,
+		boost::asio::buffer(response.get(), sizeof(server::Message)),
+		std::bind(
+			&Connection::handleWrite,
+			this,
+			response,
+			std::placeholders::_1,
+			std::placeholders::_2
+		));
 }

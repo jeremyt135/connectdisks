@@ -28,7 +28,10 @@ namespace connectdisks
 
 			// TODO - Finalize passing method/subscription for disconnecting from lobby
 			void onGameStart();
-			void onGameEnd();
+			void onGameEnd(Board::player_size_t winner);
+
+			void onTurn(); 
+			void onUpdate(Board::player_size_t player, Board::board_size_t col);
 
 			// Starts an async read from the socket
 			void waitForMessages();
@@ -53,6 +56,7 @@ namespace connectdisks
 
 			void handleDisconnect();
 			void handleClientReady();
+			void handleTurnResult(ConnectDisks::TurnResult result);
 
 			GameLobby* lobby;
 
