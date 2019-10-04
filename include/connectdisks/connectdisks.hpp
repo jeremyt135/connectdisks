@@ -53,7 +53,7 @@ namespace connectdisks
 
 	enum class ConnectDisks::TurnResult : uint8_t
 	{
-		success, wrongPlayer, badColumn, columnFull, gameFinished
+		error, success, wrongPlayer, badColumn, columnFull, gameFinished
 	};
 
 
