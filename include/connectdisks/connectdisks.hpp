@@ -35,6 +35,7 @@ namespace connectdisks
 		inline Board::board_size_t getNumColumns() const noexcept;
 		inline Board::board_size_t getNumRows() const noexcept;
 
+		operator std::string() const;
 
 		static constexpr Board::player_size_t noWinner{Board::emptySlot};
 		static constexpr Board::player_size_t defaultFirstPlayer{1};
@@ -91,4 +92,10 @@ namespace connectdisks
 	{
 		return board.getNumRows();
 	}
+}
+
+inline std::ostream& operator<<(std::ostream& out, const connectdisks::ConnectDisks& connectDisks)
+{
+	out << std::string{connectDisks};
+	return out;
 }

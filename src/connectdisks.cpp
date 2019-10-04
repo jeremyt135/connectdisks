@@ -1,7 +1,8 @@
 #include "connectdisks/connectdisks.hpp"
 
-#include <iostream>
 #include <exception>
+#include <iostream>
+#include <sstream>
 
 using namespace connectdisks;
 
@@ -245,4 +246,18 @@ Board::player_size_t connectdisks::ConnectDisks::getNextPlayer() const noexcept
 		nextPlayer = defaultFirstPlayer; // wrap around
 	}
 	return nextPlayer;
+}
+
+connectdisks::ConnectDisks::operator std::string() const
+{
+	std::ostringstream strStream;
+	strStream << board << "\n" <<
+		"Current player: " << static_cast<int>(currentPlayer) <<
+		" Next player: " << static_cast<int>(getNextPlayer()) <<
+		"\nNum turns: " << static_cast<int>(numTurns) << "\n";
+	if (hasWinner())
+	{
+		strStream << "Winner: " << static_cast<int>(winner) << "\n";
+	}
+	return strStream.str();
 }

@@ -1,6 +1,9 @@
 #include "connectdisks/board.hpp"
 
 #include <exception>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 
 using namespace connectdisks;
 
@@ -129,6 +132,36 @@ Board::column_value_t  Board::getRow(Board::board_size_t row) const
 		boardRow.push_back(column[row]);
 	}
 	return Column{std::move(boardRow)};
+}
+
+connectdisks::Board::operator std::string() const
+{
+	std::ostringstream strStream;
+	{
+		// print top row first
+		auto rowView = getRow(numRows - 1);
+		strStream << " " << static_cast<int>(rowView[0]); // print first column of row
+		for (int col = 1; col < static_cast<int>(numColumns); ++col)
+		{
+			strStream << " | " << static_cast<int>(rowView[col]);
+		}
+		strStream << "\n";
+	}
+	for (int row = static_cast<int>(numRows) - 2; row >= 0; --row)
+	{
+		// pre-print a row separator
+		strStream << std::string(3 * numColumns + (numColumns - 1), '-') << "\n";
+
+		// print the row
+		auto rowView = getRow(row);
+		strStream << " " << static_cast<int>(rowView[0]);
+		for (int col = 1; col < static_cast<int>(numColumns); ++col)
+		{
+			strStream << " | " << static_cast<int>(rowView[col]);
+		}
+		strStream << "\n";
+	}
+	return strStream.str();
 }
 
 bool Board::isColumnFullInternal(Board::board_size_t column) const noexcept

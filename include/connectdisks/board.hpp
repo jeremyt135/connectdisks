@@ -11,6 +11,7 @@
 #endif 
 
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace connectdisks
@@ -65,6 +66,8 @@ namespace connectdisks
 
 		inline board_size_t getNumColumns() const noexcept;
 		inline board_size_t getNumRows() const noexcept;
+
+		operator std::string() const;
 
 		// Nonplayer value of grid slots.
 		static constexpr player_size_t emptySlot{0};
@@ -121,4 +124,10 @@ namespace connectdisks
 		explicit Column(column_t&& column);
 		column_t column;
 	};
+}
+
+inline std::ostream& operator<<(std::ostream& out, const connectdisks::Board& board)
+{
+	out << std::string{board};
+	return out;
 }

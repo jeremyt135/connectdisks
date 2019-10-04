@@ -1,6 +1,7 @@
 #include "connectdisks/board.hpp"
 
 #include <iostream>
+#include <string>
 
 int main(int argc, char* argv[])
 {
@@ -48,14 +49,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	for (int i = 0; i < columns; ++i)
-	{
-		for (int j = 0; j < rows; ++j)
-		{
-			board.dropPieceInColumn(i, player);
-		}
-	}
-
 	{
 		std::cout << "last row:\n";
 		Board::column_value_t row = board.getRow(rows - 1);
@@ -65,7 +58,20 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	// string conversion
+	std::cout << board << "\n";
+
+	for (int i = 0; i < columns; ++i)
+	{
+		for (int j = 0; j < rows; ++j)
+		{
+			board.dropPieceInColumn(i, player);
+		}
+	}
+
+
 	std::cout << "is board full?: " << board.isFull() << "\n";
+	
 
 	try
 	{

@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 		assert(result == ConnectDisks::TurnResult::success);
 		assert(game.getWinner() == firstPlayer);
 
-
+		std::cout << game << "\n";
 	}
 
 	{
@@ -78,6 +78,8 @@ int main(int argc, char* argv[])
 		result = game.takeTurn(game.getCurrentPlayer(), 3);
 		assert(result == ConnectDisks::TurnResult::success);
 		assert(game.getWinner() == firstPlayer);
+
+		std::cout << game << "\n";
 	}
 
 	{
@@ -129,6 +131,8 @@ int main(int argc, char* argv[])
 		result = game.takeTurn(game.getCurrentPlayer(), 3); // 1st should now win
 		assert(result == ConnectDisks::TurnResult::success);
 		assert(game.getWinner() == firstPlayer);
+
+		std::cout << game << "\n";
 	}
 
 	{
@@ -174,6 +178,8 @@ int main(int argc, char* argv[])
 		result = game.takeTurn(game.getCurrentPlayer(), 0); // 1st should win now
 		assert(result == ConnectDisks::TurnResult::success);
 		assert(game.getWinner() == firstPlayer);
+
+		std::cout << game << "\n";
 	}
 
 	{
@@ -213,6 +219,8 @@ int main(int argc, char* argv[])
 		result = game.takeTurn(game.getCurrentPlayer(), 4); // first player should win
 		assert(result == ConnectDisks::TurnResult::success);
 		assert(game.getWinner() == winner);
+
+		std::cout << game << "\n";
 	}
 
 	{
@@ -270,5 +278,7 @@ int main(int argc, char* argv[])
 		result = game.takeTurn(game.getCurrentPlayer(), game.getNumColumns() - 4);
 		assert(result == ConnectDisks::TurnResult::success);
 		assert(game.getWinner() == winner);
+
+		std::cout << game << "\n";
 	}
 }
