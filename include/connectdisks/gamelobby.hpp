@@ -9,6 +9,7 @@
 #include <boost/asio.hpp>
 
 #include <atomic>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -63,6 +64,8 @@ namespace connectdisks
 			bool isFullInternal() const noexcept;
 			bool allPlayersAreReady() const noexcept;
 
+			Board::player_size_t getFirstAvailableId() const;
+
 			std::atomic<bool> lobbyIsOpen;
 			std::atomic<bool> isPlayingGame;
 			std::atomic<bool> canAddPlayers;
@@ -71,8 +74,8 @@ namespace connectdisks
 
 			std::unique_ptr<ConnectDisks> game;
 			Board::player_size_t maxPlayers;
-			Board::player_size_t nextId;
 			Board::player_size_t numReady;
+			Board::player_size_t numPlayers;
 			std::vector<std::shared_ptr<Connection>> players;
 		};
 	}

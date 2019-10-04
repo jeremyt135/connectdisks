@@ -45,7 +45,7 @@ void connectdisks::client::Client::connectToServer(std::string address, uint16_t
 	catch (std::exception& e)
 	{
 	#if defined DEBUG || _DEBUG
-		std::cerr << "Client::connectToServer: " << e.what() << "\n";
+		std::cerr << "[DEBUG] Client::connectToServer: " << e.what() << "\n";
 	#endif
 		throw;
 	}
@@ -56,7 +56,7 @@ void connectdisks::client::Client::connectToServer(std::string address, uint16_t
 void connectdisks::client::Client::waitForMessages()
 {
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Client waiting for messages\n";
+	std::cerr << "[DEBUG] Client waiting for messages\n";
 #endif
 	// read message from server
 	std::shared_ptr<server::Message> message{new server::Message{}};
@@ -94,13 +94,13 @@ void connectdisks::client::Client::handleConnection(const boost::system::error_c
 	if (!error.failed())
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Client connected \n";
+		std::cerr << "[DEBUG] Client connected \n";
 	#endif
 	}
 	else
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Client failed to connect\n";
+		std::cerr << "[DEBUG] Client failed to connect\n";
 	#endif
 	}
 }
@@ -110,7 +110,7 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 	if (!error.failed())
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Client received message \n";
+		std::cerr << "[DEBUG] Client received message \n";
 	#endif
 
 		if (len == 0)
@@ -134,23 +134,24 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 			const auto numPlayers = boost::endian::big_to_native(message->data[0]);
 			const auto numCols = boost::endian::big_to_native(message->data[1]);
 			const auto numRows = boost::endian::big_to_native(message->data[2]);
+			const auto first = boost::endian::native_to_big(message->data[3]);
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client is in a lobby that has started playing with "
+			std::cerr << "[DEBUG] Client is in a lobby that has started playing with "
 				<< static_cast<int>(numPlayers) << " players\n";
-			std::cerr << "Board size is set to cols=" << static_cast<int>(numCols) << ", rows=" <<
+			std::cerr << "[DEBUG] Board size is set to cols=" << static_cast<int>(numCols) << ", rows=" <<
 				static_cast<int>(numRows) << "\n";
 		#endif
 			// ignore if already playing
 			if (!isPlaying)
 			{
-				onGameStarted(numPlayers, 1, numCols, numRows);
+				onGameStarted(numPlayers, first, numCols, numRows);
 			}
 		}
 		break;
 		case server::Response::gameEnd:
 		{
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client is in a game that ended; returned to lobby\n";
+			std::cerr << "[DEBUG] Client is in a game that ended; returned to lobby\n";
 		#endif
 			const auto winner{
 				boost::endian::big_to_native(message->data[0])
@@ -160,14 +161,14 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 		break;
 		case server::Response::takeTurn:
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Time for client to take turn\n";
+			std::cerr << "[DEBUG] Time for client to take turn\n";
 		#endif
 			onTakeTurn();
 			break;
 		case server::Response::turnResult:
 		{
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client received results of turn\n";
+			std::cerr << "[DEBUG] Client received results of turn\n";
 		#endif
 			const auto turnResult{
 				toScopedEnum<ConnectDisks::TurnResult>::cast(
@@ -182,7 +183,7 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 		case server::Response::update:
 		{
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client received an opponent's turn update\n";
+			std::cerr << "[DEBUG] Client received an opponent's turn update\n";
 		#endif
 			const auto player{
 				boost::endian::big_to_native(message->data[0])
@@ -207,12 +208,12 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 		case boost::asio::error::connection_aborted:
 		case boost::asio::error::connection_reset:
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client::handleRead: connection ended \n";
+			std::cerr << "[DEBUG] Client::handleRead: connection ended \n";
 		#endif
 			break;
 		default:
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Client::handleRead: " << error.message() << "\n";
+			std::cerr << "[DEBUG] Client::handleRead: " << error.message() << "\n";
 		#endif
 			break;
 		}
@@ -226,13 +227,13 @@ void connectdisks::client::Client::handleWrite(std::shared_ptr<client::Message> 
 	if (!error.failed())
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Sent message to server\n";
+		std::cerr << "[DEBUG] Sent message to server\n";
 	#endif
 	}
 	else
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Client::handleWrite: " << error.message() << "\n";
+		std::cerr << "[DEBUG] Client::handleWrite: " << error.message() << "\n";
 	#endif
 	}
 }
@@ -241,7 +242,7 @@ void connectdisks::client::Client::onConnected(Board::player_size_t id)
 {
 	playerId = id;
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Client id set to: " << static_cast<int>(playerId) << " \n";
+	std::cerr << "[DEBUG] Client id set to: " << static_cast<int>(playerId) << " \n";
 #endif
 	if (connectHandler)
 	{
@@ -261,7 +262,7 @@ void connectdisks::client::Client::onDisconnect()
 
 void connectdisks::client::Client::onGameStarted(Board::player_size_t numPlayers, Board::player_size_t first, Board::board_size_t cols, Board::board_size_t rows)
 {
-	game.reset(new ConnectDisks{numPlayers, 1, cols, rows});
+	game.reset(new ConnectDisks{numPlayers, first, cols, rows});
 	startPlaying();
 	if (gameStartHandler)
 	{
@@ -300,7 +301,7 @@ void connectdisks::client::Client::onTakeTurn()
 {
 	if (turnHandler)
 	{
-		auto move = turnHandler();
+		auto move = turnHandler(); 
 		takeTurn(move);
 	}
 }
@@ -311,21 +312,23 @@ void connectdisks::client::Client::onTurnResult(ConnectDisks::TurnResult result,
 	{
 	case ConnectDisks::TurnResult::success:
 		game->takeTurn(playerId, column);
+		if (turnResultHandler)
+		{
+			turnResultHandler(result, column);
+		}
 		break;
 	default:
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Client received result of turn: " << static_cast<int>(result) << " \n";
+		std::cerr << "[DEBUG] Unsuccessful turn, client sending new turn\n";
 	#endif
-	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Unsuccessful turn, client sending new turn\n";
-	#endif
+		if (turnResultHandler)
+		{
+			turnResultHandler(result, column);
+		}
 		onTakeTurn();
 		break;
 	}
-	if (turnResultHandler)
-	{
-		turnResultHandler(result, column);
-	}
+	
 }
 
 void connectdisks::client::Client::onUpdate(Board::player_size_t player, Board::board_size_t col)
@@ -346,7 +349,7 @@ const ConnectDisks * connectdisks::client::Client::getGame() const noexcept
 void connectdisks::client::Client::startPlaying()
 {
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Client is playing\n";
+	std::cerr << "[DEBUG] Client is playing\n";
 #endif
 	isPlaying = true;
 }
@@ -354,7 +357,7 @@ void connectdisks::client::Client::startPlaying()
 void connectdisks::client::Client::stopPlaying()
 {
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Client has stopped playing\n";
+	std::cerr << "[DEBUG] Client has stopped playing\n";
 #endif
 	isPlaying = false;
 }

@@ -56,7 +56,7 @@ namespace connectdisks
 
 			void handleDisconnect();
 			void handleClientReady();
-			void handleTurnResult(ConnectDisks::TurnResult result);
+			void handleTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column);
 
 			GameLobby* lobby;
 

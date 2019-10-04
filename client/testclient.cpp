@@ -43,13 +43,14 @@ void onGameEnd(Board::player_size_t winner)
 
 Board::board_size_t onTakeTurn()
 {
+	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "It's your turn!\n"
 		<< "Enter the column to place your piece (min=1,max=" <<  
 		static_cast<int>(gameClient->getGame()->getNumColumns()) << 
 		"): ";
 	int column;
 	std::cin >> column;
-	while (!std::cin.good() && column <= 0 && column > static_cast<int>(gameClient->getGame()->getNumColumns()))
+	while (column <= 0 && column > static_cast<int>(gameClient->getGame()->getNumColumns()))
 	{
 		std::cout << "Invalid input, try again: ";
 		std::cin.clear();
@@ -65,7 +66,7 @@ void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
 	{
 	// successful turn
 	case TurnResult::success:
-		std::cout << "Your move was accepted\n";
+		std::cout << "Your move was accepted\n" << *gameClient->getGame() << "\n";
 		break;
 
 	// error cases
@@ -89,6 +90,7 @@ void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
 
 void onUpdate(Board::player_size_t player, Board::board_size_t col)
 {
+	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "Player " << static_cast<int>(player) << " dropped a piece in column " <<
 		static_cast<int>(col) << "\n";
 }
@@ -118,11 +120,12 @@ int main(int argc, char* argv[])
 	try
 	{
 		auto client = std::async(std::launch::async, runClient);
+		client.get();
 	}
 	catch (std::exception& e)
 	{
 		std::cerr << e.what() << "\n";
 	}
-	std::cin.clear();
-	std::cin.ignore();
+	int i;
+	std::cin >> i;
 }

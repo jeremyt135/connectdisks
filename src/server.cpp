@@ -39,7 +39,7 @@ connectdisks::server::Server::~Server()
 void connectdisks::server::Server::waitForConnections()
 {
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Server waiting for connections\n";
+	std::cerr << "[DEBUG] Server waiting for connections\n";
 #endif
 
 	std::shared_ptr<Connection> connection{Connection::create(ioService)};
@@ -54,20 +54,20 @@ void connectdisks::server::Server::waitForConnections()
 void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> connection, const boost::system::error_code & error)
 {
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Server trying to accept connection\n";
+	std::cerr << "[DEBUG] Server trying to accept connection\n";
 #endif
 	if (!error.failed())
 	{
 		std::lock_guard<std::mutex> lock{lobbiesMutex};
 		const auto numLobbies = lobbies.size();
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Server accepted connection, there are " << numLobbies << " lobbies \n";
+		std::cerr << "[DEBUG] Server accepted connection, there are " << numLobbies << " lobbies \n";
 	#endif
 		// assign connection to an existing lobby if one exists
 		if (numLobbies != 0)
 		{
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Lobbies exist already\n";
+			std::cerr << "[DEBUG] Lobbies exist already\n";
 		#endif
 			auto lobby = std::find_if(
 				lobbies.begin(),
@@ -79,7 +79,7 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 			if (lobby != lobbies.end())
 			{
 			#if defined DEBUG || defined _DEBUG
-				std::cout << "Adding player to lobby " << std::distance(lobbies.begin(), lobby) << "\n";
+				std::cout << "[DEBUG] Adding player to lobby " << std::distance(lobbies.begin(), lobby) << "\n";
 			#endif
 				auto gameLobby = lobby->get();
 				gameLobby->addPlayer(connection);
@@ -90,7 +90,7 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 				if (numLobbies < maxLobbies)
 				{
 				#if defined DEBUG || defined _DEBUG
-					std::cout << "Making new lobby and adding player\n";
+					std::cout << "[DEBUG] Making new lobby and adding player\n";
 				#endif
 					// make a new lobby
 					lobbies.emplace_back(new GameLobby{});
@@ -101,7 +101,7 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 				else
 				{
 				#if defined DEBUG || defined _DEBUG
-					std::cout << "Server at lobby cap, player not added to lobby\n";
+					std::cout << "[DEBUG] Server at lobby cap, player not added to lobby\n";
 				#endif
 				}
 			}
@@ -112,7 +112,7 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 			if (numLobbies < maxLobbies)
 			{
 			#if defined DEBUG || defined _DEBUG
-				std::cout << "Making new lobby and adding player\n";
+				std::cout << "[DEBUG] Making new lobby and adding player\n";
 			#endif
 				// make a new lobby
 				lobbies.emplace_back(new GameLobby{});
@@ -123,7 +123,7 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 			else
 			{
 			#if defined DEBUG || defined _DEBUG
-				std::cout << "Server at lobby cap, player not added to lobby\n";
+				std::cout << "[DEBUG] Server at lobby cap, player not added to lobby\n";
 			#endif
 			}
 		}
@@ -131,13 +131,13 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 	else
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Server::acceptConnection: " << error.message() << "\n";
+		std::cerr << "[DEBUG] Server::acceptConnection: " << error.message() << "\n";
 	#endif
 		return;
 	}
 
 #if defined DEBUG || defined _DEBUG
-	std::cout << "Added player\n";
+	std::cout << "[DEBUG] Added player\n";
 #endif
 
 	waitForConnections();

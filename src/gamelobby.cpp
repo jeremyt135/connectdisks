@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <functional>
+#include <utility>
 
 using boost::asio::ip::address_v4;
 using boost::asio::ip::tcp;
@@ -24,10 +25,10 @@ connectdisks::server::GameLobby::GameLobby(Board::player_size_t maxPlayers) :
 	canAddPlayers{true},
 	isPlayingGame{false},
 	maxPlayers{maxPlayers},
-	nextId{1},
-	numReady{0}
+	numReady{0},
+	numPlayers{0}
 {
-	players.reserve(maxPlayers);
+	players.resize(maxPlayers);
 }
 
 connectdisks::server::GameLobby::~GameLobby()
@@ -47,26 +48,37 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 	}
 
 	std::lock_guard<std::mutex> lock{playersMutex};
-	size_t prevSize = players.size();
-	players.erase(std::remove_if(players.begin(), players.end(),
-		[connection](std::shared_ptr<Connection> con){ return con->getId() == connection->getId(); }));
 
-	if (players.size() != prevSize)
+	// find the player that disconnected
+	auto playerIter = std::find_if(players.begin(), players.end(),
+		[connection](std::shared_ptr<Connection> con){
+			if (con)
+			{
+				return con->getId() == connection->getId();
+			}
+			return false;
+		});
+	if (playerIter != players.end())
 	{
-		// connection belongs to lobby
-	#if defined DEBUG || defined _DEBUG
-		std::cout << "GameLobby " << this << " player disconnected; remaining: " << players.size() << "\n";
-	#endif
+		// reset connection pointer
+		playerIter->reset();
+
+		--numPlayers;
 		--numReady;
+
+	#if defined DEBUG || defined _DEBUG
+		std::cout << "[DEBUG] GameLobby " << this << " player disconnected; remaining: " << static_cast<int>(numPlayers) << "\n";
+	#endif
 		if (isPlayingGame)
 		{
 			stopGame();
 		}
 
 		// todo handle game over plus empty lobby
-		/*if (isEmptyInternal())
+		if (isEmptyInternal())
 		{
-		}*/
+			game.reset();
+		}
 	}
 
 }
@@ -80,11 +92,18 @@ void connectdisks::server::GameLobby::onReady(std::shared_ptr<Connection> connec
 		});
 	if (player != players.end())
 	{
-		++numReady;
 		// connection belongs to lobby
+
+		++numReady;
 		if (allPlayersAreReady() && isFullInternal())
 		{
-			game.reset(new ConnectDisks{maxPlayers});
+			//Board::player_size_t id = 1;
+			//std::for_each(players.begin(), players.end(),
+			//	[&id, this](std::shared_ptr<Connection> con){
+			//		gameIds[con->getId()] = id++; // map player ids to game ids
+			//	}
+			//);
+			game.reset(new ConnectDisks{maxPlayers}); // use default that first player is id 1
 			lock.unlock();
 			// start if all players are ready
 			startGame();
@@ -94,6 +113,12 @@ void connectdisks::server::GameLobby::onReady(std::shared_ptr<Connection> connec
 
 ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared_ptr<Connection> connection, Board::board_size_t column)
 {
+	if (connection == nullptr)
+	{
+		return ConnectDisks::TurnResult::error;
+	}
+
+	std::lock_guard<std::mutex> lock{playersMutex};
 	try
 	{
 		const auto result = game->takeTurn(connection->getId(), column);
@@ -102,21 +127,23 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 		case ConnectDisks::TurnResult::success:
 		{
 			// tell other clients that there was a move
-			std::lock_guard<std::mutex> lock{playersMutex};
 			std::for_each(players.begin(), players.end(),
 				[connection, column, result, this](std::shared_ptr<Connection> otherConnection){
-					if (connection->getId() != otherConnection->getId())
+					if (otherConnection != nullptr)
 					{
-						otherConnection->onUpdate(otherConnection->getId(), column);
-					}
-					if (game->hasWinner())
-					{
-						otherConnection->onGameEnd(game->getWinner());
-					}
-					else if (otherConnection->getId() == game->getCurrentPlayer())
-					{
-						// tell the next player it's their turn
-						otherConnection->onTurn();
+						if (connection->getId() != otherConnection->getId())
+						{
+							otherConnection->onUpdate(connection->getId(), column);
+						}
+						if (game->hasWinner())
+						{
+							otherConnection->onGameEnd(game->getWinner());
+						}
+						else if (otherConnection->getId() == game->getCurrentPlayer())
+						{
+							// tell the next player it's their turn
+							otherConnection->onTurn();
+						}
 					}
 				});
 			if (game->hasWinner())
@@ -133,7 +160,7 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 	catch (std::exception& e)
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cout << "GameLobby " << this << " error taking turn " << e.what() << "\n";
+		std::cout << "[DEBUG] GameLobby " << this << " error taking turn " << e.what() << "\n";
 	#endif
 	}
 
@@ -151,10 +178,13 @@ void connectdisks::server::GameLobby::startGame()
 	// should now be immutable
 	for (auto& player : players)
 	{
-		player->onGameStart();
-		if (player->getId() == game->getCurrentPlayer())
+		if (player)
 		{
-			player->onTurn();
+			player->onGameStart();
+			if (player->getId() == game->getCurrentPlayer())
+			{
+				player->onTurn();
+			}
 		}
 	}
 }
@@ -162,23 +192,32 @@ void connectdisks::server::GameLobby::startGame()
 void connectdisks::server::GameLobby::stopGame()
 {
 #if defined DEBUG || defined _DEBUG
-	std::cout << "GameLobby " << this << " is stopping game\n";
+	std::cout << "[DEBUG] GameLobby " << this << " is stopping game\n";
 #endif
 	// stop playing if lost a player
 	isPlayingGame = false;
 	for (auto& player : players)
 	{
-		player->onGameEnd(0);
+		if (player)
+		{
+			player->onGameEnd(0);
+		}
 	}
 }
 
 void connectdisks::server::GameLobby::addPlayer(std::shared_ptr<Connection> connection)
 {
 	std::lock_guard<std::mutex> lock{playersMutex};
-	players.push_back(connection);
-	connection->setId(nextId++);
-	connection->setGameLobby(this);
-	connection->waitForMessages();
+
+	const auto id = getFirstAvailableId();
+
+	players[id] = connection;
+
+	players[id]->setId(id + 1);
+	players[id]->setGameLobby(this);
+	players[id]->waitForMessages();
+
+	++numPlayers;
 }
 
 bool connectdisks::server::GameLobby::isEmpty() const noexcept
@@ -196,7 +235,7 @@ bool connectdisks::server::GameLobby::isFull() const noexcept
 Board::player_size_t connectdisks::server::GameLobby::getNumPlayers() const noexcept
 {
 	std::lock_guard<std::mutex> lock{playersMutex};
-	return static_cast<Board::player_size_t>(players.size());
+	return static_cast<Board::player_size_t>(numPlayers);
 }
 
 ConnectDisks * connectdisks::server::GameLobby::getGame() const noexcept
@@ -208,7 +247,7 @@ void connectdisks::server::GameLobby::startLobby()
 {
 	lobbyIsOpen = true;
 #if defined DEBUG || defined _DEBUG
-	std::cout << "GameLobby " << this << " has started\n";
+	std::cout << "[DEBUG] GameLobby " << this << " has started\n";
 #endif
 }
 
@@ -225,10 +264,27 @@ bool connectdisks::server::GameLobby::isEmptyInternal() const noexcept
 
 bool connectdisks::server::GameLobby::isFullInternal() const noexcept
 {
-	return players.size() == maxPlayers;
+	return numPlayers == maxPlayers;
 }
 
 bool connectdisks::server::GameLobby::allPlayersAreReady() const noexcept
 {
-	return numReady == players.size();
+	return numReady == numPlayers;
 }
+
+Board::player_size_t connectdisks::server::GameLobby::getFirstAvailableId() const
+{
+	// find shared_ptr<Connection> holding a nullptr
+	const auto iter = std::find_if(players.begin(), players.end(), [](std::shared_ptr<Connection> con){ return con == nullptr; });
+	/*auto iter = players.begin();
+	for (; iter != players.end(); ++iter)
+	{
+		if (*iter == nullptr)
+		{
+			break;
+		}
+	}*/
+	const auto index = std::distance(players.begin(), iter);
+	return static_cast<Board::player_size_t>(index);
+}
+

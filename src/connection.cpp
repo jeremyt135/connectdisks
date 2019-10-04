@@ -36,10 +36,10 @@ void connectdisks::server::Connection::onGameStart()
 
 	// send the board dimensions
 	auto* game = lobby->getGame();
-	const auto numCols = boost::endian::native_to_big(game->getNumColumns());
-	const auto numRows = boost::endian::native_to_big(game->getNumRows());
-	response->data[1] = numCols;
-	response->data[2] = numRows;
+
+	response->data[1] = boost::endian::native_to_big(game->getNumColumns());
+	response->data[2] = boost::endian::native_to_big(game->getNumRows());
+	response->data[3] = boost::endian::native_to_big(game->getCurrentPlayer());
 
 	boost::asio::async_write(socket,
 		boost::asio::buffer(response.get(), sizeof(server::Message)),
@@ -89,7 +89,7 @@ void connectdisks::server::Connection::onTurn()
 
 void connectdisks::server::Connection::onUpdate(Board::player_size_t player, Board::board_size_t col)
 {
-	// tell client that a successful turn was taken
+	// tell client that a successful turn was taken by anotehr player
 	std::shared_ptr<server::Message> response{new server::Message{}};
 	response->response = toScopedEnum<server::Response>::cast(
 		boost::endian::native_to_big(toUnderlyingType(server::Response::update)));
@@ -109,7 +109,7 @@ void connectdisks::server::Connection::onUpdate(Board::player_size_t player, Boa
 void connectdisks::server::Connection::waitForMessages()
 {
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Connection " << this << " waiting to read message\n";
+	std::cerr << "[DEBUG] Connection " << this << " waiting to read message\n";
 #endif
 	// read a message from the client, handle in handleRead
 	std::shared_ptr<client::Message> message{new client::Message{}};
@@ -172,7 +172,7 @@ connectdisks::server::Connection::Connection(boost::asio::io_service & ioService
 void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::client::Message> message, const boost::system::error_code & error, size_t len)
 {
 #if defined DEBUG || defined _DEBUG
-	std::cerr << "Connection " << this << " trying to read message\n";
+	std::cerr << "[DEBUG] Connection " << this << " trying to read message\n";
 #endif
 	if (!error.failed())
 	{
@@ -180,7 +180,7 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 		if (len == 0)
 		{
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Connection " << this << " received 0 length message\n";
+			std::cerr << "[DEBUG] Connection " << this << " received 0 length message\n";
 		#endif
 			return;
 		}
@@ -194,7 +194,7 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 		{
 		case client::Response::ready:
 		#if defined DEBUG || defined _DEBUG
-			std::cout << "Connection " << this << ": Client is ready\n";
+			std::cout << "[DEBUG] Connection " << this << ": Client is ready\n";
 		#endif
 			handleClientReady();
 			break;
@@ -203,8 +203,11 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 			const auto column{
 				boost::endian::big_to_native(message->data[0])
 			};
+		#if defined DEBUG || defined _DEBUG
+			std::cout << "[DEBUG] Connection: " << this << ": client wants to move in column: " << static_cast<int>(column) << "\n";
+		#endif
 			const auto result = lobby->onTakeTurn(shared_from_this(), column);
-			handleTurnResult(result);
+			handleTurnResult(result, column);
 		}
 			break;
 		default:
@@ -221,13 +224,13 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 		case boost::asio::error::connection_aborted:
 		case boost::asio::error::connection_reset:
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Connection " << this << "::handleRead: client disconnected \n";
+			std::cerr << "[DEBUG] Connection " << this << "::handleRead: client disconnected \n";
 		#endif
 			handleDisconnect();
 			break;
 		default:
 		#if defined DEBUG || defined _DEBUG
-			std::cerr << "Connection " << this << "::handleRead: " << error.message() << "\n";
+			std::cerr << "[DEBUG] Connection " << this << "::handleRead: " << error.message() << "\n";
 		#endif
 			break;
 		}
@@ -240,13 +243,13 @@ void connectdisks::server::Connection::handleWrite(std::shared_ptr<server::Messa
 	if (!error.failed())
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Sent message to client\n";
+		std::cerr << "[DEBUG] Sent message to client\n";
 	#endif
 	}
 	else
 	{
 	#if defined DEBUG || defined _DEBUG
-		std::cerr << "Connection::handleWrite: " << error.message() << "\n";
+		std::cerr << "[DEBUG] Connection::handleWrite: " << error.message() << "\n";
 	#endif
 	}
 }
@@ -261,13 +264,14 @@ void connectdisks::server::Connection::handleClientReady()
 	lobby->onReady(shared_from_this());
 }
 
-void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult result)
+void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
 {
 	// send turn result
 	std::shared_ptr<server::Message> response{new server::Message{}};
 	response->response = toScopedEnum<server::Response>::cast(
 		boost::endian::native_to_big(toUnderlyingType(server::Response::turnResult)));
 	response->data[0] = boost::endian::native_to_big(toUnderlyingType(result));
+	response->data[1] = boost::endian::native_to_big(column);
 	boost::asio::async_write(socket,
 		boost::asio::buffer(response.get(), sizeof(server::Message)),
 		std::bind(
