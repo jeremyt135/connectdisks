@@ -41,15 +41,7 @@ void connectdisks::server::Connection::onGameStart()
 	response->data[2] = boost::endian::native_to_big(game->getNumRows());
 	response->data[3] = boost::endian::native_to_big(game->getCurrentPlayer());
 
-	boost::asio::async_write(socket,
-		boost::asio::buffer(response.get(), sizeof(server::Message)),
-		std::bind(
-			&Connection::handleWrite,
-			this,
-			response,
-			std::placeholders::_1,
-			std::placeholders::_2
-		));
+	sendMessage(response);
 }
 
 void connectdisks::server::Connection::onGameEnd(Board::player_size_t player)
@@ -59,15 +51,7 @@ void connectdisks::server::Connection::onGameEnd(Board::player_size_t player)
 	response->response = toScopedEnum<server::Response>::cast(
 		boost::endian::native_to_big(toUnderlyingType(server::Response::gameEnd)));
 	response->data[0] = boost::endian::native_to_big(player);
-	boost::asio::async_write(socket,
-		boost::asio::buffer(response.get(), sizeof(server::Message)),
-		std::bind(
-			&Connection::handleWrite,
-			this,
-			response,
-			std::placeholders::_1,
-			std::placeholders::_2
-		));
+	sendMessage(response);
 }
 
 void connectdisks::server::Connection::onTurn()
@@ -76,15 +60,7 @@ void connectdisks::server::Connection::onTurn()
 	std::shared_ptr<server::Message> response{new server::Message{}};
 	response->response = toScopedEnum<server::Response>::cast(
 		boost::endian::native_to_big(toUnderlyingType(server::Response::takeTurn)));
-	boost::asio::async_write(socket,
-		boost::asio::buffer(response.get(), sizeof(server::Message)),
-		std::bind(
-			&Connection::handleWrite,
-			this,
-			response,
-			std::placeholders::_1,
-			std::placeholders::_2
-		));
+	sendMessage(response);
 }
 
 void connectdisks::server::Connection::onUpdate(Board::player_size_t player, Board::board_size_t col)
@@ -95,15 +71,7 @@ void connectdisks::server::Connection::onUpdate(Board::player_size_t player, Boa
 		boost::endian::native_to_big(toUnderlyingType(server::Response::update)));
 	response->data[0] = boost::endian::native_to_big(player);
 	response->data[1] = boost::endian::native_to_big(col);
-	boost::asio::async_write(socket,
-		boost::asio::buffer(response.get(), sizeof(server::Message)),
-		std::bind(
-			&Connection::handleWrite,
-			this,
-			response,
-			std::placeholders::_1,
-			std::placeholders::_2
-		));
+	sendMessage(response);
 }
 
 void connectdisks::server::Connection::waitForMessages()
@@ -135,15 +103,7 @@ void connectdisks::server::Connection::setId(Board::player_size_t id)
 		response->response = toScopedEnum<server::Response>::cast(
 			boost::endian::native_to_big(toUnderlyingType(server::Response::connected)));
 		response->data[0] = boost::endian::native_to_big(id);
-		boost::asio::async_write(socket,
-			boost::asio::buffer(response.get(), sizeof(server::Message)),
-			std::bind(
-				&Connection::handleWrite,
-				this,
-				response,
-				std::placeholders::_1,
-				std::placeholders::_2
-			));
+		sendMessage(response);
 	}
 }
 
@@ -167,6 +127,19 @@ connectdisks::server::Connection::Connection(boost::asio::io_service & ioService
 	socket{ioService},
 	id{0}
 {
+}
+
+void connectdisks::server::Connection::sendMessage(std::shared_ptr<server::Message> message)
+{
+	boost::asio::async_write(socket,
+		boost::asio::buffer(message.get(), sizeof(server::Message)),
+		std::bind(
+			&Connection::handleWrite,
+			this,
+			message,
+			std::placeholders::_1,
+			std::placeholders::_2
+		));
 }
 
 void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::client::Message> message, const boost::system::error_code & error, size_t len)
@@ -272,13 +245,5 @@ void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult
 		boost::endian::native_to_big(toUnderlyingType(server::Response::turnResult)));
 	response->data[0] = boost::endian::native_to_big(toUnderlyingType(result));
 	response->data[1] = boost::endian::native_to_big(column);
-	boost::asio::async_write(socket,
-		boost::asio::buffer(response.get(), sizeof(server::Message)),
-		std::bind(
-			&Connection::handleWrite,
-			this,
-			response,
-			std::placeholders::_1,
-			std::placeholders::_2
-		));
+	sendMessage(response);
 }

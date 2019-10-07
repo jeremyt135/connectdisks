@@ -48,10 +48,13 @@ namespace connectdisks
 		private:
 			Connection(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
+			// Send message to client
+			void sendMessage(std::shared_ptr<server::Message> message);
+
 			// Handles messages from the client on other end of connection
 			void handleRead(std::shared_ptr<client::Message> message, const boost::system::error_code& error, size_t len);
 
-			// Sends message to client
+			// Handles result of sending message to client
 			void handleWrite(std::shared_ptr<server::Message> message, const  boost::system::error_code& error, size_t len);
 
 			void handleDisconnect();
