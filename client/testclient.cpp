@@ -34,11 +34,14 @@ void onGameEnd(Board::player_size_t winner)
 	if (winner == 0)
 	{
 		std::cout << "(A player disconnected mid-game)\n";
+		std::cout << "You can exit this window to leave, or wait for a new player\n";
 	}
 	else
 	{
 		std::cout << "Player " << static_cast<int>(winner) << " won\n";
+		std::cout << "You can exit this window to leave\n";
 	}
+	
 }
 
 Board::board_size_t onTakeTurn()
@@ -92,7 +95,7 @@ void onUpdate(Board::player_size_t player, Board::board_size_t col)
 {
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "Player " << static_cast<int>(player) << " dropped a piece in column " <<
-		static_cast<int>(col) << "\n";
+		static_cast<int>(col) + 1 << "\n";
 }
 
 void runClient()
