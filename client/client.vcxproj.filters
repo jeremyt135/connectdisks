@@ -27,5 +27,8 @@
     <ClInclude Include="..\include\connectdisks\client.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\logging.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

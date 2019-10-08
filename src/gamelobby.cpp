@@ -2,6 +2,8 @@
 
 #include "type_utility.hpp"
 
+#include "logging.hpp"
+
 #include <boost/endian/arithmetic.hpp>
 #include <boost/endian/conversion.hpp>
 
@@ -66,9 +68,7 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 		--numPlayers;
 		--numReady;
 
-	#if defined DEBUG || defined _DEBUG
-		std::cout << "[DEBUG] GameLobby " << this << " player disconnected; remaining: " << static_cast<int>(numPlayers) << "\n";
-	#endif
+		printDebug("GameLobby[", this, "]: player disconnected; remaining: ", static_cast<int>(numPlayers), "\n");
 		if (isPlayingGame)
 		{
 			stopGame();
@@ -139,6 +139,10 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 						{
 							otherConnection->onGameEnd(game->getWinner());
 						}
+						else if (game->boardFull())
+						{
+							otherConnection->onGameEnd(0);
+						}
 						else if (otherConnection->getId() == game->getCurrentPlayer())
 						{
 							// tell the next player it's their turn
@@ -150,6 +154,10 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 			{
 				onGameOver();
 			}
+			else if (game->boardFull())
+			{
+				onGameOver();
+			}
 		}
 		break;
 		default:
@@ -157,11 +165,9 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 		}
 		return result;
 	}
-	catch (std::exception& e)
+	catch (std::exception& error)
 	{
-	#if defined DEBUG || defined _DEBUG
-		std::cout << "[DEBUG] GameLobby " << this << " error taking turn " << e.what() << "\n";
-	#endif
+		printDebug("GameLobby[", this, "]::onTakeTurn: error taking turn: ", error.what(), "\n");
 	}
 
 	return ConnectDisks::TurnResult::error;
@@ -191,9 +197,7 @@ void connectdisks::server::GameLobby::startGame()
 
 void connectdisks::server::GameLobby::stopGame()
 {
-#if defined DEBUG || defined _DEBUG
-	std::cout << "[DEBUG] GameLobby " << this << " is stopping game\n";
-#endif
+	printDebug("GameLobby [", this, "]: is stopping game\n");
 	// stop playing if lost a player
 	isPlayingGame = false;
 	for (auto& player : players)
@@ -246,9 +250,7 @@ ConnectDisks * connectdisks::server::GameLobby::getGame() const noexcept
 void connectdisks::server::GameLobby::startLobby()
 {
 	lobbyIsOpen = true;
-#if defined DEBUG || defined _DEBUG
-	std::cout << "[DEBUG] GameLobby " << this << " has started\n";
-#endif
+	printDebug("GameLobby [", this, "]: has started\n");
 }
 
 void connectdisks::server::GameLobby::onGameOver()
@@ -276,14 +278,6 @@ Board::player_size_t connectdisks::server::GameLobby::getFirstAvailableId() cons
 {
 	// find shared_ptr<Connection> holding a nullptr
 	const auto iter = std::find_if(players.begin(), players.end(), [](std::shared_ptr<Connection> con){ return con == nullptr; });
-	/*auto iter = players.begin();
-	for (; iter != players.end(); ++iter)
-	{
-		if (*iter == nullptr)
-		{
-			break;
-		}
-	}*/
 	const auto index = std::distance(players.begin(), iter);
 	return static_cast<Board::player_size_t>(index);
 }

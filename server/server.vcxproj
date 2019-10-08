@@ -23,6 +23,7 @@
     <ClInclude Include="..\include\connectdisks\gamelobby.hpp" />
     <ClInclude Include="..\include\connectdisks\messaging.hpp" />
     <ClInclude Include="..\include\connectdisks\server.hpp" />
+    <ClInclude Include="..\include\logging.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\board.cpp" />
