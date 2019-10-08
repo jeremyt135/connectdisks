@@ -7,8 +7,11 @@ set (Boost_USE_STATIC_LIBS ON)
 
 find_package(Boost REQUIRED system date_time regex)
 
-set(CONNECTDISKS_SRC src/board.cpp src/connectdisks.cpp)
+if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
+	add_definitions(-DDEBUG)
+endif()
 
+set(CONNECTDISKS_SRC src/board.cpp src/connectdisks.cpp)
 set(SERVER_SRC src/server.cpp src/connection.cpp src/gamelobby.cpp ${CONNECTDISKS_SRC})
 set(CLIENT_SRC src/client.cpp ${CONNECTDISKS_SRC})
 

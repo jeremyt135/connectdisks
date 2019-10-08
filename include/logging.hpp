@@ -20,8 +20,8 @@ namespace util
 }
 
 
-#if defined DEBUG || defined _DEBUG || !defined NDEBUG
+#if defined DEBUG || defined _DEBUG
 #define printDebug(...) util::print(std::cout, " ", "[DEBUG]", __VA_ARGS__);
 #else
-#define printDebug(...)
+#define printDebug(...) ((void)__VA_ARGS__)
 #endif
