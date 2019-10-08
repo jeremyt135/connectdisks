@@ -68,7 +68,7 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 		--numPlayers;
 		--numReady;
 
-		printDebug("GameLobby[", this, "]: player disconnected; remaining: ", static_cast<int>(numPlayers), "\n");
+		print("GameLobby[", this, "]: player disconnected; remaining: ", static_cast<int>(numPlayers), "\n");
 		if (isPlayingGame)
 		{
 			stopGame();
@@ -197,7 +197,7 @@ void connectdisks::server::GameLobby::startGame()
 
 void connectdisks::server::GameLobby::stopGame()
 {
-	printDebug("GameLobby [", this, "]: is stopping game\n");
+	print("GameLobby [", this, "]: is stopping game\n");
 	// stop playing if lost a player
 	isPlayingGame = false;
 	for (auto& player : players)
@@ -250,7 +250,7 @@ ConnectDisks * connectdisks::server::GameLobby::getGame() const noexcept
 void connectdisks::server::GameLobby::startLobby()
 {
 	lobbyIsOpen = true;
-	printDebug("GameLobby [", this, "]: has started\n");
+	print("GameLobby [", this, "]: has started\n");
 }
 
 void connectdisks::server::GameLobby::onGameOver()

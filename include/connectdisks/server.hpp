@@ -40,6 +40,9 @@ namespace connectdisks
 			void waitForConnections();
 			void handleConnection(std::shared_ptr<Connection> connection, const boost::system::error_code& error);
 
+			GameLobby* findAvailableLobby();
+			GameLobby* makeNewLobby();
+
 			mutable std::mutex lobbiesMutex;
 
 			boost::asio::io_service& ioService;

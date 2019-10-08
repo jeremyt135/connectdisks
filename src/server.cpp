@@ -23,6 +23,7 @@ using namespace connectdisks::server;
 using typeutil::toUnderlyingType;
 using typeutil::toScopedEnum;
 
+
 connectdisks::server::Server::Server(
 	boost::asio::io_service & ioService,
 	std::string address, uint16_t port
@@ -39,7 +40,7 @@ connectdisks::server::Server::~Server()
 
 void connectdisks::server::Server::waitForConnections()
 {
-	printDebug("Server waiting for connections\n");
+	print("Server waiting for connections\n");
 
 	std::shared_ptr<Connection> connection{Connection::create(ioService)};
 
@@ -52,44 +53,36 @@ void connectdisks::server::Server::waitForConnections()
 
 void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> connection, const boost::system::error_code & error)
 {
-	printDebug("Server trying to accept connection\n");
+	print("Server trying to accept connection\n");
 
 	if (!error.failed())
 	{
 		std::lock_guard<std::mutex> lock{lobbiesMutex};
 		const auto numLobbies = lobbies.size();
-		printDebug("Server accepted connection, there are ", numLobbies, " lobbies \n");
+		print("Server accepted connection, there are ", numLobbies, " lobbies \n");
 		// assign connection to an existing lobby if one exists
 		if (numLobbies != 0)
 		{
-			auto lobby = std::find_if(
-				lobbies.begin(),
-				lobbies.end(),
-				[](std::unique_ptr<GameLobby>& gameLobby){
-					return !gameLobby->isFull();
-				}
-			);
-			if (lobby != lobbies.end())
+			auto lobby = findAvailableLobby();
+			if (lobby)
 			{
-				printDebug("Adding player to lobby ", std::distance(lobbies.begin(), lobby), "\n");
-				auto gameLobby = lobby->get();
-				gameLobby->addPlayer(connection);
+				print("Adding player to lobby\n");
+				lobby->addPlayer(connection);
 			}
 			else // all current lobbies are full
 			{
 				// only make new lobby if not at cap
 				if (numLobbies < maxLobbies)
 				{
-					printDebug("Making new lobby and adding player\n");
+					auto lobby = makeNewLobby();
+					print("Adding player to lobby\n");
 					// make a new lobby
-					lobbies.emplace_back(new GameLobby{});
-					auto& gameLobby = lobbies.back();
-					gameLobby->addPlayer(connection);
-					gameLobby->start();
+					lobby->addPlayer(connection);
+					//lobby->start();
 				}
 				else
 				{
-					printDebug("Server at lobby cap, not adding player\n");
+					print("Server at lobby cap, not adding player\n");
 				}
 			}
 		}
@@ -98,16 +91,15 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 			// only make new lobby if not at cap
 			if (numLobbies < maxLobbies)
 			{
-				printDebug("Making new lobby and adding player\n");
+				auto lobby = makeNewLobby();
+				print("Adding player to lobby\n");
 				// make a new lobby
-				lobbies.emplace_back(new GameLobby{});
-				auto& gameLobby = lobbies.back();
-				gameLobby->addPlayer(connection);
-				gameLobby->start();
+				lobby->addPlayer(connection);
+				//lobby->start();
 			}
 			else
 			{
-				printDebug("Server at lobby cap, not adding player\n");
+				print("Server at lobby cap, not adding player\n");
 			}
 		}
 	}
@@ -117,7 +109,33 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 		return;
 	}
 
-	printDebug("Added player\n");
+	print("Added player\n");
 
 	waitForConnections();
+}
+
+GameLobby * connectdisks::server::Server::findAvailableLobby()
+{
+	auto lobby = std::find_if(
+		lobbies.begin(),
+		lobbies.end(),
+		[](std::unique_ptr<GameLobby>& gameLobby){
+			return !gameLobby->isFull();
+		}
+	);
+	if (lobby != lobbies.end())
+	{
+		print("Found lobby for new player: ", std::distance(lobbies.begin(), lobby), "\n");
+		return lobby->get();
+	}
+	return nullptr;
+}
+
+GameLobby * connectdisks::server::Server::makeNewLobby()
+{
+	print("Making new lobby\n");
+	lobbies.emplace_back(new GameLobby{});
+	auto lobby = lobbies.back().get();
+	lobby->start();
+	return lobby;
 }
