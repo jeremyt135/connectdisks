@@ -29,4 +29,8 @@ and "src/testclient.cpp" can be modified to use a different port.
     
 ## Platforms
 
-The project has been tested on Windows 10 x64 using Visual Studio 2017 (MSVC 14.1).
+(10/8/2019) The project has been tested on Windows 10 x64 using Visual Studio 2017 (MSVC 14.1).
+
+## Notes
+
+This is currently a work in progress. It may have bugs producing crashes or other unexpected behavior. 
