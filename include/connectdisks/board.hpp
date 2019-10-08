@@ -1,15 +1,5 @@
 #pragma once
 
-#if defined _WIN32
-#if defined CREATE_DLL
-#define EXPORT __declspec(dllexport)
-#else
-#define EXPORT __declspec(dllimport)
-#endif
-#else
-#define EXPORT
-#endif 
-
 #include <limits>
 #include <string>
 #include <vector>

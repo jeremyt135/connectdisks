@@ -231,7 +231,7 @@ int main(int argc, char* argv[])
 		Board::player_size_t winner = 1;
 
 		// drop pieces in last column (player 1's piece will be at top)
-		for (int32_t i = 0; i < 4; ++i)
+		for (auto i = 0; i < 4; ++i)
 		{
 			ConnectDisks::TurnResult result = {game.takeTurn(game.getCurrentPlayer(), game.getNumColumns() - 1)};
 			assert(result == ConnectDisks::TurnResult::success);
@@ -281,4 +281,58 @@ int main(int argc, char* argv[])
 
 		std::cout << game << "\n";
 	}
+
+	{
+		// make 2nd player start the game
+		ConnectDisks game{2, 2};
+
+		// make player 1 win diagonally from topleft downwards to right
+		Board::player_size_t winner = 1;
+
+		// get player 1's piece to top of first column
+		for (auto i = 0; i < 4; ++i)
+		{
+			ConnectDisks::TurnResult result = {game.takeTurn(game.getCurrentPlayer(), 0)};
+			assert(result == ConnectDisks::TurnResult::success);
+			assert(game.getWinner() == ConnectDisks::noWinner);
+		}
+
+
+		// player 2's turn
+		ConnectDisks::TurnResult result = game.takeTurn(game.getCurrentPlayer(), 1);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == ConnectDisks::noWinner);
+
+		result = game.takeTurn(game.getCurrentPlayer(), 2);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == ConnectDisks::noWinner);
+
+		result = game.takeTurn(game.getCurrentPlayer(), 4);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == ConnectDisks::noWinner);
+
+		result = game.takeTurn(game.getCurrentPlayer(), 3);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == ConnectDisks::noWinner);
+
+		result = game.takeTurn(game.getCurrentPlayer(), 4);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == ConnectDisks::noWinner);
+
+		result = game.takeTurn(game.getCurrentPlayer(), 2);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == ConnectDisks::noWinner);
+		result = game.takeTurn(game.getCurrentPlayer(), 1);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == ConnectDisks::noWinner);
+
+		// 1st player places winning piece
+		result = game.takeTurn(game.getCurrentPlayer(), 1);
+		assert(result == ConnectDisks::TurnResult::success);
+		assert(game.getWinner() == winner);
+
+		std::cout << game << "\n";
+	}
+
+	std::cout << "tests passed\n";
 }

@@ -1,5 +1,7 @@
 #include "connectdisks/connectdisks.hpp"
 
+#include "logging.hpp"
+
 #include <exception>
 #include <iostream>
 #include <sstream>
@@ -68,19 +70,15 @@ ConnectDisks::TurnResult ConnectDisks::takeTurn(Board::player_size_t player, Boa
 			winner = checkForWinner();
 		}
 	}
-	catch (std::out_of_range& e)
+	catch (std::out_of_range& error)
 	{
 		// invalid column number 
-	#if defined DEBUG || defined _DEBUG
-		std::cerr << "ConnectDisks::takeTurn: " << e.what() << "\n";
-	#endif
+		printDebug("ConnectDisks::takeTurn: error taking turn:", error.what(), "\n");
 		return TurnResult::badColumn;
 	}
-	catch (std::exception& e)
+	catch (std::exception& error)
 	{
-	#if defined DEBUG || defined _DEBUG
-		std::cerr << "ConnectDisks::takeTurn: " << e.what() << "\n";
-	#endif
+		printDebug("ConnectDisks::takeTurn: fatal error taking turn",error.what(),"\n");
 		throw;
 	}
 
@@ -117,7 +115,7 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 
 	// check up the column (0 would be bottom, numRows - 1 would be top), starting above
 	// the last move
-	for (int32_t row = lastRow + 1; row < board.getNumRows(); ++row)
+	for (Board::board_size_t row = lastRow + 1; row < board.getNumRows(); ++row)
 	{
 		Board::player_size_t current = column[row];
 		if (current != lastPlayer)
@@ -135,7 +133,7 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 	}
 
 	// check down the column, starting below the last move
-	for (int32_t row = lastRow - 1; row >= 0; --row)
+	for (Board::board_size_t row = lastRow - 1; row != static_cast<Board::board_size_t>(-1); --row)
 	{
 		Board::player_size_t current = column[row];
 		if (current != lastPlayer)
@@ -157,7 +155,7 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 	const Board::column_value_t row{board.getRow(lastRow)};
 
 	// scan row left to right, starting one to the right of last move
-	for (int32_t col = lastColumn + 1; col < board.getNumColumns(); ++col)
+	for (Board::board_size_t col = lastColumn + 1; col < board.getNumColumns(); ++col)
 	{
 		Board::player_size_t current = row[col];
 		if (current != lastPlayer)
@@ -175,7 +173,7 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 	}
 
 	// check right to left, starting one to the left of last move
-	for (int32_t col = lastColumn - 1; col >= 0; --col)
+	for (Board::board_size_t col = lastColumn - 1; col != static_cast<Board::board_size_t>(-1); --col)
 	{
 		Board::player_size_t current = row[col];
 		if (current != lastPlayer)
@@ -194,8 +192,8 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 
 	count = 1;
 
-	// check up diagonal
-	for (int32_t row = lastRow + 1, col = lastColumn + 1;
+	// check up-right diagonal
+	for (Board::board_size_t row = lastRow + 1, col = lastColumn + 1;
 		row < board.getNumRows() && col < board.getNumColumns();
 		++row, ++col)
 	{
@@ -214,11 +212,52 @@ Board::player_size_t connectdisks::ConnectDisks::checkForWinner() const
 		}
 	}
 
-
-	// check down diagonal
-	for (int32_t row = lastRow - 1, col = lastColumn - 1;
-		row >= 0 && col >= 0;
+	// check down-left diagonal
+	for (Board::board_size_t row = lastRow - 1, col = lastColumn - 1;
+		row != static_cast<Board::board_size_t>(-1) && col != static_cast<Board::board_size_t>(-1);
 		--row, --col)
+	{
+		Board::player_size_t current = board.getDiskOwnerAt(col, row);
+		if (current != lastPlayer)
+		{
+			break;
+		}
+		else
+		{
+			++count;
+			if (count == 4)
+			{
+				return lastPlayer;
+			}
+		}
+	}
+
+	count = 1;
+
+	// check up-left diagonal
+	for (Board::board_size_t row = lastRow + 1, col = lastColumn - 1;
+		row < board.getNumRows() && col != static_cast<Board::board_size_t>(-1);
+		++row, --col)
+	{
+		Board::player_size_t current = board.getDiskOwnerAt(col, row);
+		if (current != lastPlayer)
+		{
+			break;
+		}
+		else
+		{
+			++count;
+			if (count == 4)
+			{
+				return lastPlayer;
+			}
+		}
+	}
+
+	// check down-right diagonal
+	for (Board::board_size_t row = lastRow - 1, col = lastColumn + 1;
+		row != static_cast<Board::board_size_t>(-1) && col < board.getNumColumns();
+		--row, ++col)
 	{
 		Board::player_size_t current = board.getDiskOwnerAt(col, row);
 		if (current != lastPlayer)

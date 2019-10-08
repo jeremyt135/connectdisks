@@ -23,6 +23,7 @@ namespace connectdisks
 		TurnResult takeTurn(Board::player_size_t player, Board::board_size_t column);
 
 		inline bool hasWinner() const noexcept; 
+		inline bool boardFull() const noexcept;
 
 		inline Board::player_size_t getWinner() const noexcept;
 
@@ -61,6 +62,11 @@ namespace connectdisks
 	inline bool ConnectDisks::hasWinner() const noexcept
 	{
 		return winner != noWinner;
+	}
+
+	inline bool ConnectDisks::boardFull() const noexcept
+	{
+		return board.isFull();
 	}
 
 	inline Board::player_size_t ConnectDisks::getWinner() const noexcept
