@@ -1,6 +1,6 @@
 # Overview
 
-connectdisks implements an asynchronous C++ server and client for playing the [Connect Four game](https://en.wikipedia.org/wiki/Connect_Four) over
+connectdisks implements an asynchronous TCP server and client (using C++ and Boost.Asio) for playing the [Connect Four game](https://en.wikipedia.org/wiki/Connect_Four) over
 a network.
 
 ## Running the included project
