@@ -25,11 +25,12 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		auto server = std::async(std::launch::async, runServer);
+		runServer();
 	}
 	catch (std::exception& e)
 	{
 		std::cerr << e.what() << "\n";
 	}
-	std::cin.ignore();
+	int i;
+	std::cin >> i;
 }

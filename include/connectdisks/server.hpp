@@ -20,8 +20,10 @@ namespace connectdisks
 		class GameLobby; // Runs a ConnectDisks game
 		class Connection; // Maintains connection from client
 
-		// Accepts connections from clients wanting to play ConnectDisks 
-		// and manages game lobbies.
+		/* 
+			Accepts connections from clients wanting to play ConnectDisks 
+			and manages game lobbies.
+		 */
 		class Server
 		{
 		public:
@@ -35,15 +37,14 @@ namespace connectdisks
 			Server& operator=(const Server&) = delete;
 
 		private:
-			static constexpr Board::player_size_t maxLobbies{4};
+			// limit is mostly arbitrary, but should probably be small unless lobbies poll i/o on their own thread
+			static constexpr Board::player_size_t maxLobbies{4}; 
 
 			void waitForConnections();
 			void handleConnection(std::shared_ptr<Connection> connection, const boost::system::error_code& error);
 
 			GameLobby* findAvailableLobby();
 			GameLobby* makeNewLobby();
-
-			mutable std::mutex lobbiesMutex;
 
 			boost::asio::io_service& ioService;
 			boost::asio::ip::tcp::acceptor acceptor;

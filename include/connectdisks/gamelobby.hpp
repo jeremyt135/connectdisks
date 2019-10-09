@@ -20,7 +20,10 @@ namespace connectdisks
 {
 	namespace server
 	{
-	// Runs a ConnectDisks game
+		/* 
+			Runs a ConnectDisks game. Clients do not connect to lobbies directly, rather the Server assigns
+			them to one.
+		*/
 		class GameLobby
 		{
 		public:
@@ -49,28 +52,31 @@ namespace connectdisks
 			ConnectDisks* getGame() const noexcept;
 
 			// TODO - Finalize signal/slot for Connection ending and being removed from lobby
+
+			// Handles a Connection disconnecting from the lobby
 			void onDisconnect(std::shared_ptr<Connection> connection);
+			// Handles a Connection sending a ready signal
 			void onReady(std::shared_ptr<Connection> connection);
+			// Handles a Connection taking their turn
 			ConnectDisks::TurnResult onTakeTurn(std::shared_ptr<Connection> connection, Board::board_size_t column);
 
 		private:
+			// Starts the game, locking players list and notifying players
 			void startGame();
+			// Aborts the game without a winner
 			void stopGame();
+			// Starts the lobby, allowing players to be added
 			void startLobby();
-
+			// Handles any necessary end of game cleanup
 			void onGameOver();
 
-			bool isEmptyInternal() const noexcept;
-			bool isFullInternal() const noexcept;
 			bool allPlayersAreReady() const noexcept;
 
 			Board::player_size_t getFirstAvailableId() const;
 
-			std::atomic<bool> lobbyIsOpen;
-			std::atomic<bool> isPlayingGame;
-			std::atomic<bool> canAddPlayers;
-
-			mutable std::mutex playersMutex;
+			bool lobbyIsOpen;
+			bool isPlayingGame;
+			bool canAddPlayers;
 
 			std::unique_ptr<ConnectDisks> game;
 			Board::player_size_t maxPlayers;

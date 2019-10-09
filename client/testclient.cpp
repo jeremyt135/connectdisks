@@ -122,8 +122,7 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		auto client = std::async(std::launch::async, runClient);
-		client.get();
+		runClient();
 	}
 	catch (std::exception& e)
 	{

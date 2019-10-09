@@ -5,17 +5,24 @@
 
 namespace util
 {
+	/*
+		Base case for 1 arg to print
+	*/
 	template<typename Arg0>
 	void printTo(std::ostream& out, std::string sep, Arg0&& arg0)
 	{
 		out << arg0;
 	}
 
+	/*
+		Prints variable number of arguments to output stream
+	*/
 	template<typename Arg0, typename... Args>
 	void printTo(std::ostream& out, std::string sep, Arg0&& arg0, Args&&... args)
 	{
 		out << arg0;
-		int dummy[sizeof...(Args)] = {(out << sep << args, 0)...};
+		// expand parameter pack using braced init list
+		int dummy[sizeof...(Args)] = {(out << sep << args, 0)...}; 
 	}
 }
 

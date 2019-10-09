@@ -48,7 +48,7 @@ void connectdisks::server::Connection::onGameStart()
 
 void connectdisks::server::Connection::onGameEnd(Board::player_size_t player)
 {
-	// tell client game has ended
+	// tell client game has ended and which player won
 	std::shared_ptr<server::Message> response{new server::Message{}};
 	response->response = toScopedEnum<server::Response>::cast(
 		boost::endian::native_to_big(toUnderlyingType(server::Response::gameEnd)));
@@ -223,7 +223,7 @@ void connectdisks::server::Connection::handleClientReady()
 
 void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
 {
-	// send turn result
+	// send turn result to client
 	std::shared_ptr<server::Message> response{new server::Message{}};
 	response->response = toScopedEnum<server::Response>::cast(
 		boost::endian::native_to_big(toUnderlyingType(server::Response::turnResult)));

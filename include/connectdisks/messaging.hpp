@@ -11,6 +11,9 @@ namespace connectdisks
 		{
 			error, connected, gameStart, gameEnd, takeTurn, turnResult, update
 		};
+		/*
+			Contains data to pass from server to client
+		*/
 		struct Message
 		{
 			Response response;
@@ -25,6 +28,9 @@ namespace connectdisks
 			error, ready, turn
 		};
 
+		/*
+			Contains data to pass from client to server
+		*/
 		struct Message
 		{
 			Response response;

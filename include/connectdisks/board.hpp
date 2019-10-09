@@ -11,11 +11,12 @@ namespace connectdisks
 	// up to numColumns - 1, numRows - 1 for the top right.
 	class Board
 	{
-		class ColumnView;
-		class Column;
+		class ColumnView; // allows read operations on a reference to a column
+		class Column; // allows read operations on a copy of a column
 	public:
-		using player_size_t = uint8_t;
-		using board_size_t = uint8_t;
+		// only going to allow small number of players and small board sizes
+		using player_size_t = uint8_t; 
+		using board_size_t = uint8_t; 
 
 		using column_view_t = ColumnView;
 		using column_value_t = Column;

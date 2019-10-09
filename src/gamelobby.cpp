@@ -24,7 +24,7 @@ using typeutil::toScopedEnum;
 
 connectdisks::server::GameLobby::GameLobby(Board::player_size_t maxPlayers) :
 	lobbyIsOpen{false},
-	canAddPlayers{true},
+	canAddPlayers{false},
 	isPlayingGame{false},
 	maxPlayers{maxPlayers},
 	numReady{0},
@@ -44,13 +44,6 @@ void connectdisks::server::GameLobby::start()
 
 void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> connection)
 {
-	if (!lobbyIsOpen)
-	{
-		return;
-	}
-
-	std::lock_guard<std::mutex> lock{playersMutex};
-
 	// find the player that disconnected
 	auto playerIter = std::find_if(players.begin(), players.end(),
 		[connection](std::shared_ptr<Connection> con){
@@ -68,16 +61,19 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 		--numPlayers;
 		--numReady;
 
+		canAddPlayers = true;
+
 		print("GameLobby[", this, "]: player disconnected; remaining: ", static_cast<int>(numPlayers), "\n");
+
 		if (isPlayingGame)
 		{
 			stopGame();
 		}
 
-		// todo handle game over plus empty lobby
-		if (isEmptyInternal())
+		// should close lobby entirely and destroy it in Server?
+		if (isEmpty())
 		{
-			game.reset();
+			game.reset(); // for now ensure game is reset
 		}
 	}
 
@@ -85,26 +81,19 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 
 void connectdisks::server::GameLobby::onReady(std::shared_ptr<Connection> connection)
 {
-	std::unique_lock<std::mutex> lock{playersMutex};
+	// find the connection in this lobby that has same id as the one that just readied
 	auto player = std::find_if(players.begin(), players.end(),
 		[connection](std::shared_ptr<Connection> con){
 			return con->getId() == connection->getId();
 		});
 	if (player != players.end())
 	{
-		// connection belongs to lobby
 
 		++numReady;
-		if (allPlayersAreReady() && isFullInternal())
+		if (allPlayersAreReady() && isFull())
 		{
-			//Board::player_size_t id = 1;
-			//std::for_each(players.begin(), players.end(),
-			//	[&id, this](std::shared_ptr<Connection> con){
-			//		gameIds[con->getId()] = id++; // map player ids to game ids
-			//	}
-			//);
 			game.reset(new ConnectDisks{maxPlayers}); // use default that first player is id 1
-			lock.unlock();
+
 			// start if all players are ready
 			startGame();
 		}
@@ -118,7 +107,6 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 		return ConnectDisks::TurnResult::error;
 	}
 
-	std::lock_guard<std::mutex> lock{playersMutex};
 	try
 	{
 		const auto result = game->takeTurn(connection->getId(), column);
@@ -126,26 +114,29 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 		{
 		case ConnectDisks::TurnResult::success:
 		{
-			// tell other clients that there was a move
+			// update all players appropriately
 			std::for_each(players.begin(), players.end(),
 				[connection, column, result, this](std::shared_ptr<Connection> otherConnection){
 					if (otherConnection != nullptr)
 					{
+						// tell other players that there was a move
 						if (connection->getId() != otherConnection->getId())
 						{
 							otherConnection->onUpdate(connection->getId(), column);
 						}
+						// tell all players that the game ended if there was a winner
 						if (game->hasWinner())
 						{
 							otherConnection->onGameEnd(game->getWinner());
 						}
+						// tell all players that the game is over without a winner if board is full
 						else if (game->boardFull())
 						{
 							otherConnection->onGameEnd(0);
 						}
+						// tell the next player it's their turn
 						else if (otherConnection->getId() == game->getCurrentPlayer())
 						{
-							// tell the next player it's their turn
 							otherConnection->onTurn();
 						}
 					}
@@ -175,18 +166,15 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 
 void connectdisks::server::GameLobby::startGame()
 {
-	// clumsy - fix with atomic memory order
-	std::unique_lock<std::mutex> lock{playersMutex};
-	canAddPlayers = false;
 	isPlayingGame = true;
-	lock.unlock();
+	canAddPlayers = false;
 
-	// should now be immutable
 	for (auto& player : players)
 	{
 		if (player)
 		{
 			player->onGameStart();
+			// tell the first player it's their turn
 			if (player->getId() == game->getCurrentPlayer())
 			{
 				player->onTurn();
@@ -197,9 +185,8 @@ void connectdisks::server::GameLobby::startGame()
 
 void connectdisks::server::GameLobby::stopGame()
 {
-	print("GameLobby [", this, "]: is stopping game\n");
 	// stop playing if lost a player
-	isPlayingGame = false;
+	print("GameLobby [", this, "]: is stopping game\n");
 	for (auto& player : players)
 	{
 		if (player)
@@ -211,7 +198,10 @@ void connectdisks::server::GameLobby::stopGame()
 
 void connectdisks::server::GameLobby::addPlayer(std::shared_ptr<Connection> connection)
 {
-	std::lock_guard<std::mutex> lock{playersMutex};
+	if (!canAddPlayers)
+	{
+		return;
+	}
 
 	const auto id = getFirstAvailableId();
 
@@ -226,19 +216,16 @@ void connectdisks::server::GameLobby::addPlayer(std::shared_ptr<Connection> conn
 
 bool connectdisks::server::GameLobby::isEmpty() const noexcept
 {
-	std::lock_guard<std::mutex> lock(playersMutex);
-	return isEmptyInternal();
+	return players.empty();
 }
 
 bool connectdisks::server::GameLobby::isFull() const noexcept
 {
-	std::lock_guard<std::mutex> lock(playersMutex);
-	return isFullInternal();
+	return numPlayers == maxPlayers;
 }
 
 Board::player_size_t connectdisks::server::GameLobby::getNumPlayers() const noexcept
 {
-	std::lock_guard<std::mutex> lock{playersMutex};
 	return static_cast<Board::player_size_t>(numPlayers);
 }
 
@@ -250,6 +237,7 @@ ConnectDisks * connectdisks::server::GameLobby::getGame() const noexcept
 void connectdisks::server::GameLobby::startLobby()
 {
 	lobbyIsOpen = true;
+	canAddPlayers = true;
 	print("GameLobby [", this, "]: has started\n");
 }
 
@@ -257,22 +245,14 @@ void connectdisks::server::GameLobby::onGameOver()
 {
 	// no longer playing a game but do not tell players game is over again
 	isPlayingGame = false;
-}
-
-bool connectdisks::server::GameLobby::isEmptyInternal() const noexcept
-{
-	return players.empty();
-}
-
-bool connectdisks::server::GameLobby::isFullInternal() const noexcept
-{
-	return numPlayers == maxPlayers;
+	game.reset();
 }
 
 bool connectdisks::server::GameLobby::allPlayersAreReady() const noexcept
 {
 	return numReady == numPlayers;
 }
+
 
 Board::player_size_t connectdisks::server::GameLobby::getFirstAvailableId() const
 {

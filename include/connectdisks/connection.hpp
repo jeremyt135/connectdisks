@@ -19,14 +19,15 @@ namespace connectdisks
 	{
 		class GameLobby;
 
-		// Maintains connection from clients
+		/* 
+			Maintains connection from clients and handles socket I/O.
+		*/
 		class Connection : public std::enable_shared_from_this<Connection>
 		{
 		public:
-			// TODO - Finalize passing method/subscription for disconnecting from lobby
 			static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
-			// TODO - Finalize passing method/subscription for disconnecting from lobby
+			// TODO - Change to using signal/slots
 			void onGameStart();
 			void onGameEnd(Board::player_size_t winner);
 

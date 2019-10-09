@@ -76,7 +76,7 @@ namespace connectdisks
 			void startPlaying();
 			void stopPlaying();
 
-			std::atomic<bool> isPlaying;
+			bool isPlaying;
 
 			boost::asio::ip::tcp::socket socket;
 

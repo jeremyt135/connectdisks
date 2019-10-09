@@ -57,7 +57,6 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 
 	if (!error.failed())
 	{
-		std::lock_guard<std::mutex> lock{lobbiesMutex};
 		const auto numLobbies = lobbies.size();
 		print("Server accepted connection, there are ", numLobbies, " lobbies \n");
 		// assign connection to an existing lobby if one exists
@@ -66,7 +65,7 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 			auto lobby = findAvailableLobby();
 			if (lobby)
 			{
-				print("Adding player to lobby\n");
+				print("Adding player to existing lobby\n");
 				lobby->addPlayer(connection);
 			}
 			else // all current lobbies are full
@@ -74,11 +73,10 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 				// only make new lobby if not at cap
 				if (numLobbies < maxLobbies)
 				{
+					// make a new lobby and add player
 					auto lobby = makeNewLobby();
-					print("Adding player to lobby\n");
-					// make a new lobby
+					print("Adding player to new lobby\n");
 					lobby->addPlayer(connection);
-					//lobby->start();
 				}
 				else
 				{
@@ -86,16 +84,13 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 				}
 			}
 		}
-		else
+		else // no existing lobbies
 		{
-			// only make new lobby if not at cap
 			if (numLobbies < maxLobbies)
 			{
 				auto lobby = makeNewLobby();
-				print("Adding player to lobby\n");
-				// make a new lobby
+				print("Adding player to new lobby\n");
 				lobby->addPlayer(connection);
-				//lobby->start();
 			}
 			else
 			{
@@ -116,6 +111,7 @@ void connectdisks::server::Server::handleConnection(std::shared_ptr<Connection> 
 
 GameLobby * connectdisks::server::Server::findAvailableLobby()
 {
+	// find a lobby that isn't full
 	auto lobby = std::find_if(
 		lobbies.begin(),
 		lobbies.end(),
@@ -134,7 +130,7 @@ GameLobby * connectdisks::server::Server::findAvailableLobby()
 GameLobby * connectdisks::server::Server::makeNewLobby()
 {
 	print("Making new lobby\n");
-	lobbies.emplace_back(new GameLobby{});
+	lobbies.emplace_back(new GameLobby{}); // make a new lobby using default number of max players
 	auto lobby = lobbies.back().get();
 	lobby->start();
 	return lobby;
