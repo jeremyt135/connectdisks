@@ -18,8 +18,8 @@ The included Visual Studio solution creates its output in a directory "build/(Pl
 of the solution. 
 Build files for other platforms can also be made using the included CMakeLists.
 
-By default, the server is configured to run locally using TCP port 8888. If this port can't be used for some reason, "src/testserver.cpp" 
-and "src/testclient.cpp" can be modified to use a different port.
+By default, the server is configured to run locally using TCP port 8888. If this port can't be used for some reason, "server/testserver.cpp" 
+and "client/testclient.cpp" can be modified to use a different port.
 
 ## Dependencies
 
