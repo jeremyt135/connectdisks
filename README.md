@@ -3,7 +3,7 @@
 connectdisks implements an asynchronous TCP server and client (using C++ and Boost.Asio) for playing the [Connect Four game](https://en.wikipedia.org/wiki/Connect_Four) over
 a network.
 
-## Running the included project
+## Running
 
 The included solution files and CMakeLists create separate executables for the server and client. The game can be played locally
 by running the server first and connecting at least two clients.
