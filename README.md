@@ -1,14 +1,14 @@
 # Overview
 
-connectdisks implements an asynchronous TCP server and client (using C++ and Boost.Asio) for playing the [Connect Four game](https://en.wikipedia.org/wiki/Connect_Four) over
+connectdisks implements a TCP server and client (using C++ and Boost.Asio) for playing the [Connect Four game](https://en.wikipedia.org/wiki/Connect_Four) over
 a network.
 
+The server and client currently use asynchronous socket I/O (through Boost.Asio) but each are polled from a single thread.
 ## Running
 
 The included solution files and CMakeLists create separate executables for the server and client. The game can be played locally
 by running the server first and connecting at least two clients.
-Currently, the server only supports 4 active game lobbies, with 2 players per lobby. The default board size is 5 columns, 4 rows. 
-(These limits are arbitrary and could be increased if desired.)
+Currently, the server is set to a max of 4 active game lobbies, with 2 players per lobby. The default board size is 5 columns, 4 rows.
 
 ## Building
 
