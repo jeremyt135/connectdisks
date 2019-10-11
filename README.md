@@ -35,8 +35,8 @@ and "client/testclient.cpp" can be modified to use a different port.
 - Allow lobbies to have different board sizes
     - clients would need to join lobbies by size or vote on size inside lobby
 - Allow client to manually send ready status
-- Add rematch system (or at least kick players from  lobby on game end)
-- Handle network interruptions and disconnects on Client side (reconnect system)
+- Add rematch system
+- Handle network interruptions and disconnects on Client side
 - Add server queue when all lobbies are full
 
 ## Notes
