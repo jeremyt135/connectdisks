@@ -51,19 +51,6 @@ void connectdisks::server::Connection::onGameEnd(Board::player_size_t player)
 	sendMessage(response);
 }
 
-void connectdisks::server::Connection::onUpdate(Board::player_size_t playerId, Board::board_size_t col)
-{
-	if (playerId != id)
-	{
-		// tell client that a successful turn was taken by anotehr player
-		std::shared_ptr<server::Message> response{new server::Message{}};
-		response->response = Response::update;
-		response->data[0] = playerId;
-		response->data[1] = col;
-		sendMessage(response);
-	}
-}
-
 void connectdisks::server::Connection::waitForMessages()
 {
 	printDebug("Connection waiting to read message\n");
@@ -103,13 +90,14 @@ void connectdisks::server::Connection::setGameLobby(GameLobby * lobby)
 {
 	using std::placeholders::_1;
 	using std::placeholders::_2;
+	using std::placeholders::_3;
 	using std::bind;
 
 	this->lobby = lobby;
-	lobby->connectTakeTurnHandler(GameLobby::TakeTurnHandler(bind(&Connection::onTurn, this, _1)).track_foreign(shared_from_this()));
-	lobby->connectTurnUpdateHandler(GameLobby::TurnUpdateHandler(bind(&Connection::onUpdate, this, _1, _2)).track_foreign(shared_from_this()));
-	lobby->connectGameStartHandler(GameLobby::GameStartHandler(bind(&Connection::onGameStart, this)).track_foreign(shared_from_this()));
-	lobby->connectGameEndHandler(GameLobby::GameEndHandler(bind(&Connection::onGameEnd, this, _1)).track_foreign(shared_from_this()));
+	lobby->addTurnHandler(GameLobby::TurnHandler(bind(&Connection::onTurn, this, _1)).track_foreign(shared_from_this()));
+	lobby->addTurnResultHandler(GameLobby::TurnResultHandler(bind(&Connection::onUpdate, this, _1, _2, _3)).track_foreign(shared_from_this()));
+	lobby->addGameStartHandler(GameLobby::GameStartHandler(bind(&Connection::onGameStart, this)).track_foreign(shared_from_this()));
+	lobby->addGameEndHandler(GameLobby::GameEndHandler(bind(&Connection::onGameEnd, this, _1)).track_foreign(shared_from_this()));
 }
 
 boost::asio::ip::tcp::socket& connectdisks::server::Connection::getSocket()
@@ -132,6 +120,28 @@ void connectdisks::server::Connection::onTurn(Board::player_size_t playerId)
 		std::shared_ptr<server::Message> response{new server::Message{}};
 		response->response = Response::takeTurn;
 		sendMessage(response);
+	}
+}
+
+
+void connectdisks::server::Connection::onUpdate(Board::player_size_t playerId, Board::board_size_t col, ConnectDisks::TurnResult result)
+{
+
+	if (playerId != id)
+	{
+		if (result == ConnectDisks::TurnResult::success)
+		{
+			// tell client that a successful turn was taken by another player
+			std::shared_ptr<server::Message> response{new server::Message{}};
+			response->response = Response::update;
+			response->data[0] = playerId;
+			response->data[1] = col;
+			sendMessage(response);
+		}
+	}
+	else
+	{
+		handleTurnResult(result, col);
 	}
 }
 
@@ -172,8 +182,7 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 			const auto column = message->data[0];
 			
 			printDebug("Connection: client wants to move in column: ", static_cast<int>(column), "\n");
-			const auto result = lobby->onTakeTurn(shared_from_this(), column);
-			handleTurnResult(result, column);
+			tookTurn(shared_from_this(), column);
 		}
 			break;
 		default:
@@ -214,12 +223,12 @@ void connectdisks::server::Connection::handleWrite(std::shared_ptr<server::Messa
 
 void connectdisks::server::Connection::handleDisconnect()
 {
-	lobby->onDisconnect(shared_from_this());
+	disconnected(shared_from_this());
 }
 
 void connectdisks::server::Connection::handleClientReady()
 {
-	lobby->onReady(shared_from_this());
+	readied(shared_from_this());
 }
 
 void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)

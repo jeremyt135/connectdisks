@@ -30,8 +30,8 @@ namespace connectdisks
 		{
 			ADD_SIGNAL(GameStart, gameStarted, void)
 			ADD_SIGNAL(GameEnd, gameEnded, void, Board::player_size_t)
-			ADD_SIGNAL(TakeTurn, takeTurn, void, Board::player_size_t)
-			ADD_SIGNAL(TurnUpdate, tookTurn, void, Board::player_size_t, Board::board_size_t)
+			ADD_SIGNAL(Turn, takeTurn, void, Board::player_size_t)
+			ADD_SIGNAL(TurnResult, tookTurn, void, Board::player_size_t, Board::board_size_t, ConnectDisks::TurnResult)
 
 		public:
 			GameLobby(Board::player_size_t maxPlayers = ConnectDisks::minNumPlayers);
@@ -58,16 +58,14 @@ namespace connectdisks
 
 			ConnectDisks* getGame() const noexcept;
 
-			// TODO - Finalize signal/slot for Connection ending and being removed from lobby
-
+		private:
+			// Handles a Connection taking their turn
+			void onTakeTurn(std::shared_ptr<Connection> connection, Board::board_size_t column);
 			// Handles a Connection disconnecting from the lobby
 			void onDisconnect(std::shared_ptr<Connection> connection);
 			// Handles a Connection sending a ready signal
 			void onReady(std::shared_ptr<Connection> connection);
-			// Handles a Connection taking their turn
-			ConnectDisks::TurnResult onTakeTurn(std::shared_ptr<Connection> connection, Board::board_size_t column);
 
-		private:
 			// Starts the game, locking players list and notifying players
 			void startGame();
 			// Aborts the game without a winner

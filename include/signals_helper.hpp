@@ -15,7 +15,7 @@ public:\
 private: \
 	SIGNAL(sig) name;\
 public: \
-	boost::signals2::connection CAT(connect, SLOT(sig))(const SLOT(sig) & handler)\
+	boost::signals2::connection CAT(add, SLOT(sig))(const SLOT(sig) & handler)\
 	{\
 		return name . connect(handler);\
 	}\

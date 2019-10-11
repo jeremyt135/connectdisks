@@ -28,7 +28,7 @@ namespace connectdisks
 		{
 			ADD_SIGNAL(Disconnect, disconnected, void, std::shared_ptr<Connection>)
 			ADD_SIGNAL(Ready, readied, void, std::shared_ptr<Connection>)
-			ADD_SIGNAL(TurnResult, turnResult, void, std::shared_ptr<Connection>, Board::board_size_t)
+			ADD_SIGNAL(Turn, tookTurn, void, std::shared_ptr<Connection>, Board::board_size_t)
 			
 		public:
 			static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
@@ -52,7 +52,7 @@ namespace connectdisks
 			void onTurn(Board::player_size_t playerId);
 			void onGameStart();
 			void onGameEnd(Board::player_size_t winner);
-			void onUpdate(Board::player_size_t playerId, Board::board_size_t col);
+			void onUpdate(Board::player_size_t playerId, Board::board_size_t col, ConnectDisks::TurnResult result);
 
 			// Send message to client
 			void sendMessage(std::shared_ptr<server::Message> message);
