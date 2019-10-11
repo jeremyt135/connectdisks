@@ -24,6 +24,7 @@
     <ClInclude Include="..\include\connectdisks\messaging.hpp" />
     <ClInclude Include="..\include\connectdisks\server.hpp" />
     <ClInclude Include="..\include\logging.hpp" />
+    <ClInclude Include="..\include\signals_helper.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\board.cpp" />

@@ -4,9 +4,6 @@
 
 #include "logging.hpp"
 
-#include <boost/endian/arithmetic.hpp>
-#include <boost/endian/conversion.hpp>
-
 #include <algorithm>
 #include <iostream>
 #include <functional>
@@ -115,39 +112,43 @@ ConnectDisks::TurnResult connectdisks::server::GameLobby::onTakeTurn(std::shared
 		case ConnectDisks::TurnResult::success:
 		{
 			// update all players appropriately
-			std::for_each(players.begin(), players.end(),
-				[connection, column, result, this](std::shared_ptr<Connection> otherConnection){
-					if (otherConnection != nullptr)
-					{
-						// tell other players that there was a move
-						if (connection->getId() != otherConnection->getId())
-						{
-							otherConnection->onUpdate(connection->getId(), column);
-						}
-						// tell all players that the game ended if there was a winner
-						if (game->hasWinner())
-						{
-							otherConnection->onGameEnd(game->getWinner());
-						}
-						// tell all players that the game is over without a winner if board is full
-						else if (game->boardFull())
-						{
-							otherConnection->onGameEnd(0);
-						}
-						// tell the next player it's their turn
-						else if (otherConnection->getId() == game->getCurrentPlayer())
-						{
-							otherConnection->onTurn();
-						}
-					}
-				});
-			if (game->hasWinner())
+			//std::for_each(players.begin(), players.end(),
+			//	[connection, column, result, this](std::shared_ptr<Connection> otherConnection){
+			//		if (otherConnection != nullptr)
+			//		{
+			//			// tell other players that there was a move
+			//			/*if (connection->getId() != otherConnection->getId())
+			//			{
+			//				otherConnection->onUpdate(connection->getId(), column);
+			//			}*/
+			//			//// tell all players that the game ended if there was a winner
+			//			//if (game->hasWinner())
+			//			//{
+			//			//	otherConnection->onGameEnd(game->getWinner());
+			//			//}
+			//			//// tell all players that the game is over without a winner if board is full
+			//			//else if (game->boardFull())
+			//			//{
+			//			//	otherConnection->onGameEnd(0);
+			//			//}
+			//			// tell the next player it's their turn
+			//			/*else if (otherConnection->getId() == game->getCurrentPlayer())
+			//			{
+			//				otherConnection->onTurn();
+			//			}*/
+			//		}
+			//	});
+
+			// notify other players that there was a move
+			tookTurn(connection->getId(), column);
+
+			if (game->hasWinner() || game->boardFull())
 			{
 				onGameOver();
 			}
-			else if (game->boardFull())
+			else
 			{
-				onGameOver();
+				takeTurn(game->getCurrentPlayer());
 			}
 		}
 		break;
@@ -169,31 +170,42 @@ void connectdisks::server::GameLobby::startGame()
 	isPlayingGame = true;
 	canAddPlayers = false;
 
-	for (auto& player : players)
+	// tell the first player it's their turn
+	/*for (auto& player : players)
 	{
 		if (player)
 		{
 			player->onGameStart();
-			// tell the first player it's their turn
-			if (player->getId() == game->getCurrentPlayer())
-			{
-				player->onTurn();
-			}
 		}
-	}
+	}*/
+	gameStarted();
+	takeTurn(game->getCurrentPlayer());
+	//for (auto& player : players)
+	//{
+	//	if (player)
+	//	{
+	//		player->onGameStart();
+	//		// tell the first player it's their turn
+	//		if (player->getId() == game->getCurrentPlayer())
+	//		{
+	//			player->onTurn();
+	//		}
+	//	}
+	//}
 }
 
 void connectdisks::server::GameLobby::stopGame()
 {
 	// stop playing if lost a player
 	print("GameLobby [", this, "]: is stopping game\n");
-	for (auto& player : players)
+	gameEnded(game->noWinner);
+	/*for (auto& player : players)
 	{
 		if (player)
 		{
 			player->onGameEnd(0);
 		}
-	}
+	}*/
 }
 
 void connectdisks::server::GameLobby::addPlayer(std::shared_ptr<Connection> connection)
@@ -244,6 +256,14 @@ void connectdisks::server::GameLobby::startLobby()
 void connectdisks::server::GameLobby::onGameOver()
 {
 	// no longer playing a game but do not tell players game is over again
+	if (game->hasWinner())
+	{
+		gameEnded(game->getWinner());
+	}
+	else
+	{
+		gameEnded(game->noWinner);
+	}
 	isPlayingGame = false;
 	game.reset();
 }

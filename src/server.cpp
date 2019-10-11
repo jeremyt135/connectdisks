@@ -8,8 +8,6 @@
 #include "type_utility.hpp"
 #include "logging.hpp"
 
-#include <boost/endian/arithmetic.hpp>
-#include <boost/endian/conversion.hpp>
 
 #include <algorithm>
 #include <iostream>

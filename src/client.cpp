@@ -6,9 +6,6 @@
 #include "type_utility.hpp"
 #include "logging.hpp"
 
-#include <boost/endian/arithmetic.hpp>
-#include <boost/endian/conversion.hpp>
-
 #include <array>
 #include <iostream>
 #include <thread>
@@ -72,9 +69,8 @@ void connectdisks::client::Client::sendReady()
 {
 	// tell server we're ready to play
 	std::shared_ptr<client::Message> message{new client::Message{}};
-	message->response = toScopedEnum<client::Response>::cast(
-		boost::endian::native_to_big(toUnderlyingType(client::Response::ready)));
-	message->data[0] = boost::endian::native_to_big(playerId);
+	message->response = Response::ready;
+	message->data[0] = playerId;
 	boost::asio::async_write(socket,
 		boost::asio::buffer(message.get(), sizeof(client::Message)),
 		std::bind(
@@ -109,23 +105,19 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 			return;
 		}
 
-		const auto response{
-			toScopedEnum<server::Response>::cast(
-				boost::endian::big_to_native(toUnderlyingType(message->response))
-			)
-		};
+		const auto response = message->response;
 
 		switch (response)
 		{
 		case server::Response::connected:
-			onConnected(boost::endian::big_to_native(message->data[0]));
+			onConnected(message->data[0]);
 			break;
 		case server::Response::gameStart:
 		{
-			const auto numPlayers = boost::endian::big_to_native(message->data[0]);
-			const auto numCols = boost::endian::big_to_native(message->data[1]);
-			const auto numRows = boost::endian::big_to_native(message->data[2]);
-			const auto first = boost::endian::native_to_big(message->data[3]);
+			const auto numPlayers = message->data[0];
+			const auto numCols = message->data[1];
+			const auto numRows = message->data[2];
+			const auto first = message->data[3];
 			printDebug(
 				"Client is in a lobby that has started playing with "
 				, static_cast<int>(numPlayers), " players\n");
@@ -142,9 +134,8 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 		case server::Response::gameEnd:
 		{
 			printDebug("Client is in a game that ended; returned to lobby\n");
-			const auto winner{
-				boost::endian::big_to_native(message->data[0])
-			};
+			const auto winner = message->data[0];
+			
 			onGameEnded(winner);
 		}
 		break;
@@ -155,25 +146,16 @@ void connectdisks::client::Client::handleRead(std::shared_ptr<server::Message> m
 		case server::Response::turnResult:
 		{
 			printDebug("Client received results of turn\n");
-			const auto turnResult{
-				toScopedEnum<ConnectDisks::TurnResult>::cast(
-					boost::endian::big_to_native(message->data[0]))
-			};
-			const auto column{
-				boost::endian::big_to_native(message->data[1])
-			};
+			const auto turnResult = toScopedEnum<ConnectDisks::TurnResult>::cast(message->data[0]);
+			const auto column = message->data[1];
 			onTurnResult(turnResult, column);
 		}
 		break;
 		case server::Response::update:
 		{
 			printDebug("Client received an opponent's turn update\n");
-			const auto player{
-				boost::endian::big_to_native(message->data[0])
-			};
-			const auto column{
-				boost::endian::big_to_native(message->data[1])
-			};
+			const auto player = message->data[0];
+			const auto column =	message->data[1];
 			onUpdate(player, column);
 		}
 		break;
@@ -256,9 +238,8 @@ void connectdisks::client::Client::takeTurn(Board::board_size_t column)
 {
 	// send turn to server
 	std::shared_ptr<client::Message> message{new client::Message{}};
-	message->response = toScopedEnum<client::Response>::cast(
-		boost::endian::native_to_big(toUnderlyingType(client::Response::turn)));
-	message->data[0] = boost::endian::native_to_big(column);
+	message->response = Response::turn;
+	message->data[0] = column;
 	boost::asio::async_write(socket,
 		boost::asio::buffer(message.get(), sizeof(client::Message)),
 		std::bind(

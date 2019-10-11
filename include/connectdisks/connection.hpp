@@ -5,6 +5,8 @@
 
 #include "connectdisks/messaging.hpp"
 
+#include "signals_helper.hpp"
+
 #include <boost/asio.hpp>
 
 #include <memory>
@@ -24,15 +26,13 @@ namespace connectdisks
 		*/
 		class Connection : public std::enable_shared_from_this<Connection>
 		{
+			ADD_SIGNAL(Disconnect, disconnected, void, std::shared_ptr<Connection>)
+			ADD_SIGNAL(Ready, readied, void, std::shared_ptr<Connection>)
+			ADD_SIGNAL(TurnResult, turnResult, void, std::shared_ptr<Connection>, Board::board_size_t)
+			
 		public:
 			static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
-			// TODO - Change to using signal/slots
-			void onGameStart();
-			void onGameEnd(Board::player_size_t winner);
-
-			void onTurn(); 
-			void onUpdate(Board::player_size_t player, Board::board_size_t col);
 
 			// Starts an async read from the socket
 			void waitForMessages();
@@ -48,6 +48,11 @@ namespace connectdisks
 			boost::asio::ip::tcp::socket& getSocket();
 		private:
 			Connection(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
+
+			void onTurn(Board::player_size_t playerId);
+			void onGameStart();
+			void onGameEnd(Board::player_size_t winner);
+			void onUpdate(Board::player_size_t playerId, Board::board_size_t col);
 
 			// Send message to client
 			void sendMessage(std::shared_ptr<server::Message> message);

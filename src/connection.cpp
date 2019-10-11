@@ -4,9 +4,6 @@
 #include "type_utility.hpp"
 #include "logging.hpp"
 
-#include <boost/endian/arithmetic.hpp>
-#include <boost/endian/conversion.hpp>
-
 #include <algorithm>
 #include <iostream>
 #include <functional>
@@ -30,18 +27,17 @@ void connectdisks::server::Connection::onGameStart()
 {
 	// send id to client
 	std::shared_ptr<server::Message> response{new server::Message{}};
-	response->response = toScopedEnum<server::Response>::cast(
-		boost::endian::native_to_big(toUnderlyingType(server::Response::gameStart)));
+	response->response = Response::gameStart;
 
 	// send the number of players
-	response->data[0] = boost::endian::native_to_big(lobby->getNumPlayers());
+	response->data[0] = lobby->getNumPlayers();
 
 	// send the board dimensions
 	auto* game = lobby->getGame();
-
-	response->data[1] = boost::endian::native_to_big(game->getNumColumns());
-	response->data[2] = boost::endian::native_to_big(game->getNumRows());
-	response->data[3] = boost::endian::native_to_big(game->getCurrentPlayer());
+	
+	response->data[1] = game->getNumColumns();
+	response->data[2] = game->getNumRows();
+	response->data[3] = game->getCurrentPlayer();
 
 	sendMessage(response);
 }
@@ -50,30 +46,22 @@ void connectdisks::server::Connection::onGameEnd(Board::player_size_t player)
 {
 	// tell client game has ended and which player won
 	std::shared_ptr<server::Message> response{new server::Message{}};
-	response->response = toScopedEnum<server::Response>::cast(
-		boost::endian::native_to_big(toUnderlyingType(server::Response::gameEnd)));
-	response->data[0] = boost::endian::native_to_big(player);
+	response->response = Response::gameEnd;
+	response->data[0] = player;
 	sendMessage(response);
 }
 
-void connectdisks::server::Connection::onTurn()
+void connectdisks::server::Connection::onUpdate(Board::player_size_t playerId, Board::board_size_t col)
 {
-	// tell client it's their turn
-	std::shared_ptr<server::Message> response{new server::Message{}};
-	response->response = toScopedEnum<server::Response>::cast(
-		boost::endian::native_to_big(toUnderlyingType(server::Response::takeTurn)));
-	sendMessage(response);
-}
-
-void connectdisks::server::Connection::onUpdate(Board::player_size_t player, Board::board_size_t col)
-{
-	// tell client that a successful turn was taken by anotehr player
-	std::shared_ptr<server::Message> response{new server::Message{}};
-	response->response = toScopedEnum<server::Response>::cast(
-		boost::endian::native_to_big(toUnderlyingType(server::Response::update)));
-	response->data[0] = boost::endian::native_to_big(player);
-	response->data[1] = boost::endian::native_to_big(col);
-	sendMessage(response);
+	if (playerId != id)
+	{
+		// tell client that a successful turn was taken by anotehr player
+		std::shared_ptr<server::Message> response{new server::Message{}};
+		response->response = Response::update;
+		response->data[0] = playerId;
+		response->data[1] = col;
+		sendMessage(response);
+	}
 }
 
 void connectdisks::server::Connection::waitForMessages()
@@ -100,9 +88,8 @@ void connectdisks::server::Connection::setId(Board::player_size_t id)
 
 		// send id to client
 		std::shared_ptr<server::Message> response{new server::Message{}};
-		response->response = toScopedEnum<server::Response>::cast(
-			boost::endian::native_to_big(toUnderlyingType(server::Response::connected)));
-		response->data[0] = boost::endian::native_to_big(id);
+		response->response = Response::connected;
+		response->data[0] = id;
 		sendMessage(response);
 	}
 }
@@ -114,7 +101,15 @@ connectdisks::Board::player_size_t connectdisks::server::Connection::getId() con
 
 void connectdisks::server::Connection::setGameLobby(GameLobby * lobby)
 {
+	using std::placeholders::_1;
+	using std::placeholders::_2;
+	using std::bind;
+
 	this->lobby = lobby;
+	lobby->connectTakeTurnHandler(GameLobby::TakeTurnHandler(bind(&Connection::onTurn, this, _1)).track_foreign(shared_from_this()));
+	lobby->connectTurnUpdateHandler(GameLobby::TurnUpdateHandler(bind(&Connection::onUpdate, this, _1, _2)).track_foreign(shared_from_this()));
+	lobby->connectGameStartHandler(GameLobby::GameStartHandler(bind(&Connection::onGameStart, this)).track_foreign(shared_from_this()));
+	lobby->connectGameEndHandler(GameLobby::GameEndHandler(bind(&Connection::onGameEnd, this, _1)).track_foreign(shared_from_this()));
 }
 
 boost::asio::ip::tcp::socket& connectdisks::server::Connection::getSocket()
@@ -127,6 +122,17 @@ connectdisks::server::Connection::Connection(boost::asio::io_service & ioService
 	socket{ioService},
 	id{0}
 {
+}
+
+void connectdisks::server::Connection::onTurn(Board::player_size_t playerId)
+{
+	if (playerId == id)
+	{
+		// tell client it's their turn
+		std::shared_ptr<server::Message> response{new server::Message{}};
+		response->response = Response::takeTurn;
+		sendMessage(response);
+	}
 }
 
 void connectdisks::server::Connection::sendMessage(std::shared_ptr<server::Message> message)
@@ -154,12 +160,8 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 			return;
 		}
 
-		const auto request{
-			toScopedEnum<client::Response>::cast(
-				boost::endian::big_to_native(toUnderlyingType(message->response))
-			)
-		};
-		switch (request)
+		const auto response = message->response;
+		switch (response)
 		{
 		case client::Response::ready:
 			printDebug("Connection: client is ready\n");
@@ -167,9 +169,8 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 			break;
 		case client::Response::turn:
 		{
-			const auto column{
-				boost::endian::big_to_native(message->data[0])
-			};
+			const auto column = message->data[0];
+			
 			printDebug("Connection: client wants to move in column: ", static_cast<int>(column), "\n");
 			const auto result = lobby->onTakeTurn(shared_from_this(), column);
 			handleTurnResult(result, column);
@@ -225,9 +226,8 @@ void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult
 {
 	// send turn result to client
 	std::shared_ptr<server::Message> response{new server::Message{}};
-	response->response = toScopedEnum<server::Response>::cast(
-		boost::endian::native_to_big(toUnderlyingType(server::Response::turnResult)));
-	response->data[0] = boost::endian::native_to_big(toUnderlyingType(result));
-	response->data[1] = boost::endian::native_to_big(column);
+	response->response = Response::turnResult;
+	response->data[0] = toUnderlyingType(result);
+	response->data[1] = column;
 	sendMessage(response);
 }

@@ -6,6 +6,8 @@
 
 #include "connectdisks/messaging.hpp"
 
+#include "signals_helper.hpp"
+
 #include <boost/asio.hpp>
 
 #include <atomic>
@@ -26,6 +28,11 @@ namespace connectdisks
 		*/
 		class GameLobby
 		{
+			ADD_SIGNAL(GameStart, gameStarted, void)
+			ADD_SIGNAL(GameEnd, gameEnded, void, Board::player_size_t)
+			ADD_SIGNAL(TakeTurn, takeTurn, void, Board::player_size_t)
+			ADD_SIGNAL(TurnUpdate, tookTurn, void, Board::player_size_t, Board::board_size_t)
+
 		public:
 			GameLobby(Board::player_size_t maxPlayers = ConnectDisks::minNumPlayers);
 
