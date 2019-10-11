@@ -51,13 +51,27 @@ Board::board_size_t onTakeTurn()
 		<< "Enter the column to place your piece (min=1,max=" <<  
 		static_cast<int>(gameClient->getGame()->getNumColumns()) << 
 		"): ";
-	int column;
-	std::cin >> column;
-	while (column <= 0 && column > static_cast<int>(gameClient->getGame()->getNumColumns()))
+
+	const auto maxColumns = static_cast<int>(gameClient->getGame()->getNumColumns());
+
+	int column{-1};
+	std::string input;
+	for(;;)
 	{
+		std::getline(std::cin, input);
+		try
+		{
+			size_t pos = 0;
+			column = std::stoi(input, &pos);
+			if (pos == input.size() && column > 0 && column <= maxColumns)
+			{
+				break;
+			}
+		}
+		catch (...) // invalid_argument or out_of_range
+		{
+		}
 		std::cout << "Invalid input, try again: ";
-		std::cin.clear();
-		std::cin >> column;
 	}
 	return static_cast<Board::board_size_t>(column) - 1;
 }
