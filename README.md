@@ -24,7 +24,6 @@ and "client/testclient.cpp" can be modified to use a different port.
 ## Dependencies
 
 - [Boost 1.71.0](https://www.boost.org/users/history/version_1_71_0.html)
-    - Needed for Boost.Asio, Boost.Endian
     - *Other versions may work but will also require changing the included Visual Studio project files to point to your version*
     
 ## Platforms
