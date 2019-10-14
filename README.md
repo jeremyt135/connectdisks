@@ -30,15 +30,6 @@ and "client/testclient.cpp" can be modified to use a different port.
 
 (10/8/2019) The project has been tested on Windows 10 x64 using Visual Studio 2017 (MSVC 14.1).
 
-## TODO
-- Add configuration to increase lobby limit
-- Allow lobbies to have different board sizes
-    - clients would need to join lobbies by size or vote on size inside lobby
-- Allow client to manually send ready status
-- Add rematch system
-- Handle network interruptions and disconnects on Client side
-- Add server queue when all lobbies are full
-
 ## Notes
 
 This is currently a work in progress. It may have bugs producing crashes or other unexpected behavior. 
