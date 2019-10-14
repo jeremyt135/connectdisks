@@ -20,14 +20,13 @@ using connectdisks::ConnectDisks;
 using typeutil::toUnderlyingType;
 using typeutil::toScopedEnum;
 
-connectdisks::client::Client::Client(boost::asio::io_service & ioService, std::string address, uint16_t port)
+connectdisks::client::Client::Client(boost::asio::io_service & ioService)
 	:
 	isPlaying{false},
 	socket{ioService},
 	playerId{0},
 	game{nullptr}
 {
-	connectToServer(address, port);
 }
 
 connectdisks::client::Client::~Client()
@@ -199,42 +198,30 @@ void connectdisks::client::Client::onConnected(Board::player_size_t id)
 {
 	playerId = id;
 	printDebug("Client id set to: ", static_cast<int>(playerId), "\n");
-	if (connectHandler)
-	{
-		connectHandler(id);
-	}
+	connected(id);
 	sendReady();
 }
 
 void connectdisks::client::Client::onDisconnect()
 {
 	stopPlaying();
-	if (disconnectHandler)
-	{
-		disconnectHandler();
-	}
+	disconnected();
 }
 
 void connectdisks::client::Client::onGameStarted(Board::player_size_t numPlayers, Board::player_size_t first, Board::board_size_t cols, Board::board_size_t rows)
 {
 	game.reset(new ConnectDisks{numPlayers, first, cols, rows});
 	startPlaying();
-	if (gameStartHandler)
-	{
-		gameStartHandler(numPlayers, first, cols, rows);
-	}
+	gameStarted(numPlayers, first, cols, rows);
 }
 
 void connectdisks::client::Client::onGameEnded(Board::player_size_t winner)
 {
 	stopPlaying();
-	if (gameEndHandler)
-	{
-		gameEndHandler(winner);
-	}
+	gameEnded(winner);
 }
 
-void connectdisks::client::Client::takeTurn(Board::board_size_t column)
+void connectdisks::client::Client::sendTurn(Board::board_size_t column)
 {
 	// send turn to server
 	std::shared_ptr<client::Message> message{new client::Message{}};
@@ -253,10 +240,17 @@ void connectdisks::client::Client::takeTurn(Board::board_size_t column)
 
 void connectdisks::client::Client::onTakeTurn()
 {
-	if (turnHandler)
+	auto column = takeTurn(); // result of signal with value is boost::optional
+	if (column)
 	{
-		auto move = turnHandler();
-		takeTurn(move);
+		sendTurn(column.get());
+	}
+	else
+	{
+		// if unassigned, there's no slot attached
+		const auto errorMsg = "Client::onTakeTurn: error: no slot attached to signal takeTurn\n";
+		printDebug(errorMsg);
+		throw std::runtime_error(errorMsg);
 	}
 }
 
@@ -266,17 +260,12 @@ void connectdisks::client::Client::onTurnResult(ConnectDisks::TurnResult result,
 	{
 	case ConnectDisks::TurnResult::success:
 		game->takeTurn(playerId, column);
-		if (turnResultHandler)
-		{
-			turnResultHandler(result, column);
-		}
+		tookTurn(result, column);
 		break;
 	default:
 		printDebug("Unsuccessful turn, client sending new turn\n");
-		if (turnResultHandler)
-		{
-			turnResultHandler(result, column);
-		}
+
+		tookTurn(result, column);
 		onTakeTurn();
 		break;
 	}
@@ -287,10 +276,8 @@ void connectdisks::client::Client::onUpdate(Board::player_size_t player, Board::
 {
 	// assume all turns sent to us from server are good
 	game->takeTurn(player, col);
-	if (updateHandler)
-	{
-		updateHandler(player, col);
-	}
+
+	gameUpdated(player, col);
 }
 
 const ConnectDisks * connectdisks::client::Client::getGame() const noexcept

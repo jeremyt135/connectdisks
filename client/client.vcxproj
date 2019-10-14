@@ -163,6 +163,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\connectdisks\client.hpp" />
     <ClInclude Include="..\include\logging.hpp" />
+    <ClInclude Include="..\include\signals_helper.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

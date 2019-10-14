@@ -10,6 +10,59 @@ using connectdisks::client::Client;
 
 std::unique_ptr<Client> gameClient;
 
+/*
+	Callbacks to use with gameClient
+*/
+void runClient();
+
+void onConnect(Board::player_size_t id);
+void onDisconnect();
+
+void onGameStart(Board::player_size_t numPlayers, Board::player_size_t first, 
+				 Board::board_size_t cols, Board::board_size_t rows);
+void onGameEnd(Board::player_size_t winner);
+
+Board::board_size_t onTakeTurn();
+void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column);
+
+void onUpdate(Board::player_size_t player, Board::board_size_t col);
+
+int main(int argc, char* argv[])
+{
+	try
+	{
+		runClient();
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+	int i;
+	std::cin >> i;
+}
+
+void runClient()
+{
+	try
+	{
+		boost::asio::io_service service;
+		gameClient.reset(new Client{service});
+		gameClient->addConnectHandler(onConnect);
+		gameClient->addDisconnectHandler(onDisconnect);
+		gameClient->addGameStartHandler(onGameStart);
+		gameClient->addGameEndHandler(onGameEnd);
+		gameClient->addTurnHandler(onTakeTurn);
+		gameClient->addTurnResultHandler(onTurnResult);
+		gameClient->addGameUpdateHandler(onUpdate);
+		gameClient->connectToServer("127.0.0.1", 8888);
+		service.run();
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+}
+
 void onConnect(Board::player_size_t id)
 {
 	std::cout << "You have connected to the game server. Your id is " << static_cast<int>(id) << "\n";
@@ -41,22 +94,24 @@ void onGameEnd(Board::player_size_t winner)
 		std::cout << "Player " << static_cast<int>(winner) << " won\n";
 		std::cout << "You can exit this window to leave\n";
 	}
-	
+
 }
 
 Board::board_size_t onTakeTurn()
 {
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "It's your turn!\n"
-		<< "Enter the column to place your piece (min=1,max=" <<  
-		static_cast<int>(gameClient->getGame()->getNumColumns()) << 
+		<< "Enter the column to place your piece (min=1,max=" <<
+		static_cast<int>(gameClient->getGame()->getNumColumns()) <<
 		"): ";
 
 	const auto maxColumns = static_cast<int>(gameClient->getGame()->getNumColumns());
 
+	
+	// read line from cin until a valid column is read
 	int column{-1};
 	std::string input;
-	for(;;)
+	for (;;)
 	{
 		std::getline(std::cin, input);
 		try
@@ -110,38 +165,4 @@ void onUpdate(Board::player_size_t player, Board::board_size_t col)
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "Player " << static_cast<int>(player) << " dropped a piece in column " <<
 		static_cast<int>(col) + 1 << "\n";
-}
-
-void runClient()
-{
-	try
-	{
-		boost::asio::io_service service;
-		gameClient.reset(new Client{service, "127.0.0.1", 8888});
-		gameClient->connectHandler = onConnect;
-		gameClient->gameStartHandler = onGameStart;
-		gameClient->gameEndHandler = onGameEnd;
-		gameClient->turnHandler = onTakeTurn;
-		gameClient->turnResultHandler = onTurnResult;
-		gameClient->updateHandler = onUpdate;
-		service.run();
-	}
-	catch (std::exception& e)
-	{
-		std::cerr << e.what() << "\n";
-	}
-}
-
-int main(int argc, char* argv[])
-{
-	try
-	{
-		runClient();
-	}
-	catch (std::exception& e)
-	{
-		std::cerr << e.what() << "\n";
-	}
-	int i;
-	std::cin >> i;
 }

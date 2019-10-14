@@ -5,6 +5,8 @@
 
 #include "connectdisks/messaging.hpp"
 
+#include "signals_helper.hpp"
+
 #include <boost/asio.hpp>
 
 #include <functional>
@@ -15,48 +17,47 @@ namespace connectdisks
 {
 	namespace client
 	{
-		using ConnectHandler	= std::function<void(Board::player_size_t)>;
-		using DisconnectHandler = std::function<void()>;
-
-		using GameStartHandler	= std::function<void(Board::player_size_t, Board::player_size_t, Board::board_size_t, Board::board_size_t)>;
-		using GameEndHandler	= std::function<void(Board::player_size_t)>;
-
-		using TurnHandler		= std::function<Board::board_size_t()>;
-		using TurnResultHandler	= std::function<void(ConnectDisks::TurnResult, Board::board_size_t)>;
-		using UpdateHandler		= std::function<void(Board::player_size_t, Board::board_size_t)>;
-
+		/*
+			Allows user to play a ConnectDisks game online. Users must connect slots
+			to all gameplay related signals to play the game.
+		*/
 		class Client
 		{
+			/*
+				Optional signals - users can still play the game without these but it may be difficult
+				to track the game progress and send correct moves.
+			*/
+			ADD_SIGNAL(Connect, connected, void, Board::player_size_t)
+			ADD_SIGNAL(Disconnect, disconnected, void)
+			ADD_SIGNAL(GameStart, gameStarted, void, Board::player_size_t, Board::player_size_t, Board::board_size_t, Board::board_size_t)
+			ADD_SIGNAL(GameEnd, gameEnded, void, Board::player_size_t)
+			ADD_SIGNAL(TurnResult, tookTurn, void, ConnectDisks::TurnResult, Board::board_size_t)
+			ADD_SIGNAL(GameUpdate, gameUpdated, void, Board::player_size_t, Board::board_size_t)
+
+			/*
+				Required signals - users must provide a handler, and Client will throw a
+				std::runtime_exception if one isn't provided.
+			*/
+			ADD_SIGNAL(Turn, takeTurn, Board::player_size_t) // The last handler will provide the return value
+			
 		public:
 
-			Client(
-				boost::asio::io_service& ioService,
-				std::string address,
-				uint16_t port);
+			Client(boost::asio::io_service& ioService);
 			Client(const Client&) = delete;
 			~Client();
 
 			Client& operator=(const Client&) = delete;
 				
-			ConnectHandler		connectHandler;
-			DisconnectHandler	disconnectHandler;
+			// Connects to a ConnectDisks game server
+			void connectToServer(std::string address, uint16_t port);
 
-			GameStartHandler	gameStartHandler;
-			GameEndHandler		gameEndHandler;
-
-			TurnHandler			turnHandler;
-			TurnResultHandler	turnResultHandler;
-
-			UpdateHandler		updateHandler;
+			// Sends message to server indicating Client is ready to play
+			void sendReady();
 
 			// Returns const pointer to game instance, user can't take turns using this pointer
 			const ConnectDisks* getGame() const noexcept;
 		private:
-			// Connects to a ConnectDisks game server
-			void connectToServer(std::string address, uint16_t port);
-
 			void waitForMessages();
-			void sendReady();
 
 			void handleConnection(const boost::system::error_code& error);
 			void handleRead(std::shared_ptr<server::Message> message, const boost::system::error_code& error, size_t len);
@@ -68,7 +69,7 @@ namespace connectdisks
 			void onGameStarted(Board::player_size_t numPlayers, Board::player_size_t first, Board::board_size_t cols, Board::board_size_t rows);
 			void onGameEnded(Board::player_size_t winner);
 
-			void takeTurn(Board::board_size_t column);
+			void sendTurn(Board::board_size_t column);
 			void onTakeTurn();
 			void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t col);
 			void onUpdate(Board::player_size_t player, Board::board_size_t col);
