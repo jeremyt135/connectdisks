@@ -33,7 +33,6 @@ namespace connectdisks
 		public:
 			static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
-
 			// Starts an async read from the socket
 			void waitForMessages();
 
@@ -54,8 +53,17 @@ namespace connectdisks
 			void onGameEnd(Board::player_size_t winner);
 			void onUpdate(Board::player_size_t playerId, Board::board_size_t col, ConnectDisks::TurnResult result);
 
-			// Send message to client
+			// Sends a message to client
 			void sendMessage(std::shared_ptr<server::Message> message);
+
+			void sendWinner(Board::player_size_t winner);
+
+			// Sends message to client asking if they want to stay in lobby
+			void askForRematch();
+			// Sends confirmation to client that rematch request is received
+			void confirmRematch();
+
+			void disconnect();
 
 			// Handles messages from the client on other end of connection
 			void handleRead(std::shared_ptr<client::Message> message, const boost::system::error_code& error, size_t len);
@@ -66,6 +74,8 @@ namespace connectdisks
 			void handleDisconnect();
 			void handleClientReady();
 			void handleTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column);
+
+			void handleRematch(bool shouldRematch);
 
 			GameLobby* lobby;
 

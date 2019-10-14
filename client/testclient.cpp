@@ -10,10 +10,12 @@ using connectdisks::client::Client;
 
 std::unique_ptr<Client> gameClient;
 
+// Sets up and runs gameClient
+void runClient();
+
 /*
 	Callbacks to use with gameClient
 */
-void runClient();
 
 void onConnect(Board::player_size_t id);
 void onDisconnect();
@@ -27,6 +29,12 @@ void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column);
 
 void onUpdate(Board::player_size_t player, Board::board_size_t col);
 
+// Prompts user to input that they're ready to play
+bool getUserReady();
+
+// Prompts user if they want to play again in same lobby
+bool getUserRematch();
+
 int main(int argc, char* argv[])
 {
 	try
@@ -37,8 +45,9 @@ int main(int argc, char* argv[])
 	{
 		std::cerr << e.what() << "\n";
 	}
-	int i;
-	std::cin >> i;
+	std::cout << "Press enter to exit..." << std::endl;
+	std::cin.clear();
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 void runClient()
@@ -47,19 +56,66 @@ void runClient()
 	{
 		boost::asio::io_service service;
 		gameClient.reset(new Client{service});
+
 		gameClient->addConnectHandler(onConnect);
 		gameClient->addDisconnectHandler(onDisconnect);
+
+		gameClient->addReadyStatusHandler(getUserReady);
+		gameClient->addRematchStatusHandler(getUserRematch);
+
 		gameClient->addGameStartHandler(onGameStart);
 		gameClient->addGameEndHandler(onGameEnd);
+
 		gameClient->addTurnHandler(onTakeTurn);
 		gameClient->addTurnResultHandler(onTurnResult);
 		gameClient->addGameUpdateHandler(onUpdate);
+
 		gameClient->connectToServer("127.0.0.1", 8888);
 		service.run();
 	}
 	catch (std::exception& e)
 	{
 		std::cerr << e.what() << "\n";
+	}
+}
+
+bool getUserReady()
+{
+	std::string input;
+	for (;;)
+	{
+		std::cout << "Input \"ready\" if you want to play, or \"quit\" to disconnect\n";
+		std::getline(std::cin, input);
+		if (input == "ready")
+		{
+			std::cout << "Sending ready to server\n";
+			return true;
+		}
+		else if (input == "quit")
+		{
+			std::cout << "Sending quit to server\n";
+			return false;
+		}
+	}
+}
+
+bool getUserRematch()
+{
+	std::string input;
+	for (;;)
+	{
+		std::cout << "Input \"rematch\" if you want to play, or \"quit\" to disconnect\n";
+		std::getline(std::cin, input);
+		if (input == "rematch")
+		{
+			std::cout << "Sending rematch to server\n";
+			return true;
+		}
+		else if (input == "quit")
+		{
+			std::cout << "Sending quit to server\n";
+			return false;
+		}
 	}
 }
 

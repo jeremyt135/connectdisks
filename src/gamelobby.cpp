@@ -16,9 +16,6 @@ using namespace connectdisks::server;
 using connectdisks::Board;
 using connectdisks::ConnectDisks;
 
-using typeutil::toUnderlyingType;
-using typeutil::toScopedEnum;
-
 connectdisks::server::GameLobby::GameLobby(Board::player_size_t maxPlayers) :
 	lobbyIsOpen{false},
 	canAddPlayers{false},
@@ -56,7 +53,10 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 		playerIter->reset();
 
 		--numPlayers;
-		--numReady;
+		if (numReady > 0)
+		{
+			--numReady;
+		}
 
 		canAddPlayers = true;
 
@@ -65,12 +65,6 @@ void connectdisks::server::GameLobby::onDisconnect(std::shared_ptr<Connection> c
 		if (isPlayingGame)
 		{
 			stopGame();
-		}
-
-		// should close lobby entirely and destroy it in Server?
-		if (isEmpty())
-		{
-			game.reset(); // for now ensure game is reset
 		}
 	}
 
@@ -81,7 +75,11 @@ void connectdisks::server::GameLobby::onReady(std::shared_ptr<Connection> connec
 	// find the connection in this lobby that has same id as the one that just readied
 	auto player = std::find_if(players.begin(), players.end(),
 		[connection](std::shared_ptr<Connection> con){
-			return con->getId() == connection->getId();
+			if (con != nullptr)
+			{
+				return con->getId() == connection->getId();
+			}
+			return false;
 		});
 	if (player != players.end())
 	{
@@ -99,9 +97,10 @@ void connectdisks::server::GameLobby::onReady(std::shared_ptr<Connection> connec
 
 void connectdisks::server::GameLobby::onTakeTurn(std::shared_ptr<Connection> connection, Board::board_size_t column)
 {
-	if (connection == nullptr)
+	if (connection == nullptr || !isPlayingGame)
 	{
 		tookTurn(connection->getId(), column, ConnectDisks::TurnResult::error);
+		return;
 	}
 
 	try
@@ -141,6 +140,9 @@ void connectdisks::server::GameLobby::stopGame()
 {
 	// stop playing if lost a player
 	print("GameLobby [", this, "]: is stopping game\n");
+	numReady = 0;
+	isPlayingGame = false;
+	game.reset();
 	gameEnded(game->noWinner);
 }
 
@@ -207,6 +209,7 @@ void connectdisks::server::GameLobby::onGameOver()
 		gameEnded(game->noWinner);
 	}
 	isPlayingGame = false;
+	numReady = 0;
 	game.reset();
 }
 

@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
 	{
 		std::cerr << e.what() << "\n";
 	}
-	int i;
-	std::cin >> i;
+	std::cout << "Press enter to exit..." << std::endl;
+	std::cin.clear();
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }

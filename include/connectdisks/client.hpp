@@ -10,6 +10,7 @@
 #include <boost/asio.hpp>
 
 #include <functional>
+#include <future>
 #include <memory>
 #include <string>
 
@@ -36,10 +37,12 @@ namespace connectdisks
 
 			/*
 				Required signals - users must provide a handler, and Client will throw a
-				std::runtime_exception if one isn't provided.
+				std::runtime_exception if one isn't provided. (Signals with a non-void return
+				will use the value returned by last handler)
 			*/
-			ADD_SIGNAL(Turn, takeTurn, Board::player_size_t) // The last handler will provide the return value
-			
+			ADD_SIGNAL(Turn, takeTurn, Board::player_size_t)
+			ADD_SIGNAL(ReadyStatus, askIfReady, bool)
+			ADD_SIGNAL(RematchStatus, askIfRematch, bool)
 		public:
 
 			Client(boost::asio::io_service& ioService);
@@ -51,13 +54,30 @@ namespace connectdisks
 			// Connects to a ConnectDisks game server
 			void connectToServer(std::string address, uint16_t port);
 
-			// Sends message to server indicating Client is ready to play
-			void sendReady();
-
 			// Returns const pointer to game instance, user can't take turns using this pointer
 			const ConnectDisks* getGame() const noexcept;
 		private:
+			// Waits for data to be available on socket
 			void waitForMessages();
+
+			// Sends a message to Server
+			void sendMessage(std::shared_ptr<client::Message> message);
+
+			// Sends message to server indicating Client is ready to play
+			void sendReady();
+
+			// Sends message to server indicating Client wants a rematch
+			void sendRematch(bool shouldRematch);
+
+			void sendTurn(Board::board_size_t column);
+
+			void startPlaying();
+			void stopPlaying();
+
+			void disconnect();
+
+			void getReadyStatus();
+			void getRematchStatus();
 
 			void handleConnection(const boost::system::error_code& error);
 			void handleRead(std::shared_ptr<server::Message> message, const boost::system::error_code& error, size_t len);
@@ -69,13 +89,9 @@ namespace connectdisks
 			void onGameStarted(Board::player_size_t numPlayers, Board::player_size_t first, Board::board_size_t cols, Board::board_size_t rows);
 			void onGameEnded(Board::player_size_t winner);
 
-			void sendTurn(Board::board_size_t column);
 			void onTakeTurn();
 			void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t col);
 			void onUpdate(Board::player_size_t player, Board::board_size_t col);
-
-			void startPlaying();
-			void stopPlaying();
 
 			bool isPlaying;
 

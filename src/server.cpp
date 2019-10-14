@@ -18,10 +18,6 @@ using boost::asio::ip::tcp;
 
 using namespace connectdisks::server;
 
-using typeutil::toUnderlyingType;
-using typeutil::toScopedEnum;
-
-
 connectdisks::server::Server::Server(
 	boost::asio::io_service & ioService,
 	std::string address, uint16_t port

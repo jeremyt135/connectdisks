@@ -16,7 +16,6 @@ using connectdisks::Board;
 using connectdisks::ConnectDisks;
 
 using typeutil::toUnderlyingType;
-using typeutil::toScopedEnum;
 
 std::shared_ptr<Connection> connectdisks::server::Connection::create(boost::asio::io_service & ioService, GameLobby* lobby)
 {
@@ -34,7 +33,7 @@ void connectdisks::server::Connection::onGameStart()
 
 	// send the board dimensions
 	auto* game = lobby->getGame();
-	
+
 	response->data[1] = game->getNumColumns();
 	response->data[2] = game->getNumRows();
 	response->data[3] = game->getCurrentPlayer();
@@ -44,11 +43,25 @@ void connectdisks::server::Connection::onGameStart()
 
 void connectdisks::server::Connection::onGameEnd(Board::player_size_t player)
 {
+	sendWinner(player);
+	askForRematch();
+}
+
+void connectdisks::server::Connection::sendWinner(Board::player_size_t winner)
+{
 	// tell client game has ended and which player won
-	std::shared_ptr<server::Message> response{new server::Message{}};
-	response->response = Response::gameEnd;
-	response->data[0] = player;
-	sendMessage(response);
+	std::shared_ptr<server::Message> message{new server::Message{}};
+	message->response = Response::gameEnd;
+	message->data[0] = winner;
+	sendMessage(message);
+}
+
+void connectdisks::server::Connection::askForRematch()
+{
+	std::shared_ptr<server::Message> message{new server::Message{}};
+	message->response = Response::rematch;
+	message->data[0] = static_cast<uint8_t>(false);
+	sendMessage(message);
 }
 
 void connectdisks::server::Connection::waitForMessages()
@@ -74,10 +87,10 @@ void connectdisks::server::Connection::setId(Board::player_size_t id)
 		this->id = id;
 
 		// send id to client
-		std::shared_ptr<server::Message> response{new server::Message{}};
-		response->response = Response::connected;
-		response->data[0] = id;
-		sendMessage(response);
+		std::shared_ptr<server::Message> message{new server::Message{}};
+		message->response = Response::connected;
+		message->data[0] = id;
+		sendMessage(message);
 	}
 }
 
@@ -132,11 +145,11 @@ void connectdisks::server::Connection::onUpdate(Board::player_size_t playerId, B
 		if (result == ConnectDisks::TurnResult::success)
 		{
 			// tell client that a successful turn was taken by another player
-			std::shared_ptr<server::Message> response{new server::Message{}};
-			response->response = Response::update;
-			response->data[0] = playerId;
-			response->data[1] = col;
-			sendMessage(response);
+			std::shared_ptr<server::Message> message{new server::Message{}};
+			message->response = Response::update;
+			message->data[0] = playerId;
+			message->data[1] = col;
+			sendMessage(message);
 		}
 	}
 	else
@@ -174,17 +187,32 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 		switch (response)
 		{
 		case client::Response::ready:
-			printDebug("Connection: client is ready\n");
 			handleClientReady();
 			break;
 		case client::Response::turn:
 		{
 			const auto column = message->data[0];
-			
 			printDebug("Connection: client wants to move in column: ", static_cast<int>(column), "\n");
 			tookTurn(shared_from_this(), column);
 		}
-			break;
+		break;
+		case client::Response::rematch:
+		{
+			const auto hasStatus = static_cast<bool>(message->data[0]);
+			if (hasStatus)
+			{
+				// client is responding with their rematch status
+				const auto shouldRematch = static_cast<bool>(message->data[1]);
+				handleRematch(shouldRematch);
+			}
+			else
+			{
+				// client responded but without a status
+				printDebug("Connection received rematch message with empty status\n");
+				// TODO: ask client to send again
+				disconnect();
+			}
+		}
 		default:
 			break;
 		}
@@ -198,7 +226,6 @@ void connectdisks::server::Connection::handleRead(std::shared_ptr<connectdisks::
 		case boost::asio::error::eof:
 		case boost::asio::error::connection_aborted:
 		case boost::asio::error::connection_reset:
-			printDebug("Connection::handleRead: error: client disconnected\n");
 			handleDisconnect();
 			break;
 		default:
@@ -223,20 +250,52 @@ void connectdisks::server::Connection::handleWrite(std::shared_ptr<server::Messa
 
 void connectdisks::server::Connection::handleDisconnect()
 {
+	printDebug("Connection::handleRead: error: client disconnected\n");
 	disconnected(shared_from_this());
 }
 
 void connectdisks::server::Connection::handleClientReady()
 {
+	printDebug("Connection: client is ready\n");
 	readied(shared_from_this());
 }
 
 void connectdisks::server::Connection::handleTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
 {
 	// send turn result to client
-	std::shared_ptr<server::Message> response{new server::Message{}};
-	response->response = Response::turnResult;
-	response->data[0] = toUnderlyingType(result);
-	response->data[1] = column;
-	sendMessage(response);
+	std::shared_ptr<server::Message> message{new server::Message{}};
+	message->response = Response::turnResult;
+	message->data[0] = toUnderlyingType(result);
+	message->data[1] = column;
+	sendMessage(message);
 }
+
+void connectdisks::server::Connection::handleRematch(bool shouldRematch)
+{
+	printDebug("Connection: client wants rematch?: ", shouldRematch, "\n");
+	if (shouldRematch)
+	{
+		confirmRematch();
+	}
+	else
+	{
+		disconnect();
+	}
+}
+
+void connectdisks::server::Connection::confirmRematch()
+{
+	// echo to client that they're rematching
+	std::shared_ptr<server::Message> message{new server::Message{}};
+	message->response = Response::rematch;
+	message->data[0] = static_cast<uint8_t>(true);
+	message->data[1] = static_cast<uint8_t>(true);
+	sendMessage(message);
+}
+
+void connectdisks::server::Connection::disconnect()
+{
+	// tell lobby we're leaving
+	disconnected(shared_from_this());
+}
+
