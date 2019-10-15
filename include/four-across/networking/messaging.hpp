@@ -3,7 +3,7 @@
 #include <array>
 #include <cstdint>
 
-namespace connectdisks
+namespace game
 {
 	namespace server
 	{

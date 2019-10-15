@@ -1,12 +1,12 @@
-#include "connectdisks/client.hpp"
+#include "four-across/networking/client/client.hpp"
 
 #include <boost/asio.hpp>
 
 #include <iostream>
 #include <thread>
 
-using namespace connectdisks;
-using connectdisks::client::Client;
+using game::client::Client;
+using game::FourAcross;
 
 std::unique_ptr<Client> gameClient;
 
@@ -17,17 +17,17 @@ void runClient();
 	Callbacks to use with gameClient
 */
 
-void onConnect(Board::player_size_t id);
+void onConnect(uint8_t id);
 void onDisconnect();
 
-void onGameStart(Board::player_size_t numPlayers, Board::player_size_t first, 
-				 Board::board_size_t cols, Board::board_size_t rows);
-void onGameEnd(Board::player_size_t winner);
+void onGameStart(uint8_t numPlayers, uint8_t first, 
+				 uint8_t cols, uint8_t rows);
+void onGameEnd(uint8_t winner);
 
-Board::board_size_t onTakeTurn();
-void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column);
+uint8_t onTakeTurn();
+void onTurnResult(FourAcross::TurnResult result, uint8_t column);
 
-void onUpdate(Board::player_size_t player, Board::board_size_t col);
+void onUpdate(uint8_t player, uint8_t col);
 
 // Prompts user to input that they're ready to play
 bool getUserReady();
@@ -119,7 +119,7 @@ bool getUserRematch()
 	}
 }
 
-void onConnect(Board::player_size_t id)
+void onConnect(uint8_t id)
 {
 	std::cout << "You have connected to the game server. Your id is " << static_cast<int>(id) << "\n";
 }
@@ -129,15 +129,15 @@ void onDisconnect()
 	std::cout << "You have disconnected from the game server.\n";
 }
 
-void onGameStart(Board::player_size_t numPlayers, Board::player_size_t first,
-	Board::board_size_t cols, Board::board_size_t rows)
+void onGameStart(uint8_t numPlayers, uint8_t first,
+	uint8_t cols, uint8_t rows)
 {
 	std::cout << "Your game has started with " << static_cast<int>(numPlayers) << " players.\n"
 		<< "Player " << static_cast<int>(first) << " is first.\n"
 		<< "The board size is " << static_cast<int>(cols) << "x" << static_cast<int>(rows) << "\n";
 }
 
-void onGameEnd(Board::player_size_t winner)
+void onGameEnd(uint8_t winner)
 {
 	std::cout << "Your game has ended.\n";
 	if (winner == 0)
@@ -153,7 +153,7 @@ void onGameEnd(Board::player_size_t winner)
 
 }
 
-Board::board_size_t onTakeTurn()
+uint8_t onTakeTurn()
 {
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "It's your turn!\n"
@@ -184,12 +184,12 @@ Board::board_size_t onTakeTurn()
 		}
 		std::cout << "Invalid input, try again: ";
 	}
-	return static_cast<Board::board_size_t>(column) - 1;
+	return static_cast<uint8_t>(column) - 1;
 }
 
-void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
+void onTurnResult(FourAcross::TurnResult result, uint8_t column)
 {
-	using TurnResult = ConnectDisks::TurnResult;
+	using TurnResult = FourAcross::TurnResult;
 	switch (result)
 	{
 	// successful turn
@@ -216,7 +216,7 @@ void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
 	}
 }
 
-void onUpdate(Board::player_size_t player, Board::board_size_t col)
+void onUpdate(uint8_t player, uint8_t col)
 {
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "Player " << static_cast<int>(player) << " dropped a piece in column " <<

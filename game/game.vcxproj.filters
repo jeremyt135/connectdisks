@@ -10,19 +10,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="testboard.cpp" />
-    <ClCompile Include="testconnectdisks.cpp" />
     <ClCompile Include="..\src\board.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\connectdisks.cpp">
+    <ClCompile Include="..\src\game.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="testgame.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\connectdisks\board.hpp">
+    <ClInclude Include="..\include\four-across\game\board.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\connectdisks\connectdisks.hpp">
+    <ClInclude Include="..\include\four-across\game\game.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

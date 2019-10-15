@@ -1,11 +1,11 @@
-#include "connectdisks/server.hpp"
+#include "four-across/networking/server/server.hpp"
 
 #include <boost/asio.hpp>
 
 #include <iostream>
 #include <thread>
 
-using connectdisks::server::Server;
+using game::server::Server;
 
 void runServer()
 {

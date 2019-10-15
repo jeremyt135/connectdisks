@@ -157,13 +157,15 @@
   <ItemGroup>
     <ClCompile Include="..\src\board.cpp" />
     <ClCompile Include="..\src\client.cpp" />
-    <ClCompile Include="..\src\connectdisks.cpp" />
+    <ClCompile Include="..\src\game.cpp" />
     <ClCompile Include="testclient.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\connectdisks\client.hpp" />
+    <ClInclude Include="..\include\four-across\networking\client\client.hpp" />
+    <ClInclude Include="..\include\four-across\networking\messaging.hpp" />
     <ClInclude Include="..\include\logging.hpp" />
-    <ClInclude Include="..\include\signals_helper.hpp" />
+    <ClInclude Include="..\include\signals-helper.hpp" />
+    <ClInclude Include="..\include\type-utility.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

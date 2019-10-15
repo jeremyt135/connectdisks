@@ -1,11 +1,9 @@
 #pragma once
 
-#include "connectdisks/board.hpp"
-#include "connectdisks/connectdisks.hpp"
+#include "four-across/game/game.hpp"
+#include "four-across/networking/messaging.hpp"
 
-#include "connectdisks/messaging.hpp"
-
-#include "signals_helper.hpp"
+#include "signals-helper.hpp"
 
 #include <boost/asio.hpp>
 
@@ -15,7 +13,7 @@
 #include <thread>
 #include <vector>
 
-namespace connectdisks
+namespace game
 {
 	namespace server
 	{
@@ -28,7 +26,7 @@ namespace connectdisks
 		{
 			ADD_SIGNAL(Disconnect, disconnected, void, std::shared_ptr<Connection>)
 			ADD_SIGNAL(Ready, readied, void, std::shared_ptr<Connection>)
-			ADD_SIGNAL(Turn, tookTurn, void, std::shared_ptr<Connection>, Board::board_size_t)
+			ADD_SIGNAL(Turn, tookTurn, void, std::shared_ptr<Connection>, uint8_t)
 			
 		public:
 			static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
@@ -37,9 +35,9 @@ namespace connectdisks
 			void waitForMessages();
 
 			// Sets the id that the player should have
-			void setId(Board::player_size_t id);
+			void setId(uint8_t id);
 
-			Board::player_size_t getId() const noexcept;
+			uint8_t getId() const noexcept;
 
 			// Sets the GameLobby that this is connected to
 			void setGameLobby(GameLobby* lobby);
@@ -48,15 +46,15 @@ namespace connectdisks
 		private:
 			Connection(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
-			void onTurn(Board::player_size_t playerId);
+			void onTurn(uint8_t playerId);
 			void onGameStart();
-			void onGameEnd(Board::player_size_t winner);
-			void onUpdate(Board::player_size_t playerId, Board::board_size_t col, ConnectDisks::TurnResult result);
+			void onGameEnd(uint8_t winner);
+			void onUpdate(uint8_t playerId, uint8_t col, FourAcross::TurnResult result);
 
 			// Sends a message to client
 			void sendMessage(std::shared_ptr<server::Message> message);
 
-			void sendWinner(Board::player_size_t winner);
+			void sendWinner(uint8_t winner);
 
 			// Sends message to client asking if they want to stay in lobby
 			void askForRematch();
@@ -73,14 +71,14 @@ namespace connectdisks
 
 			void handleDisconnect();
 			void handleClientReady();
-			void handleTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column);
+			void handleTurnResult(FourAcross::TurnResult result, uint8_t column);
 
 			void handleRematch(bool shouldRematch);
 
 			GameLobby* lobby;
 
 			boost::asio::ip::tcp::socket socket;
-			Board::player_size_t id;
+			uint8_t id;
 		};
 	}
 }

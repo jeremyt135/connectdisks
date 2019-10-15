@@ -7,7 +7,7 @@
     <Filter Include="src">
       <UniqueIdentifier>{08c7244a-a709-46dd-af3a-1b97a6801274}</UniqueIdentifier>
     </Filter>
-    <Filter Include="connectdisks">
+    <Filter Include="game">
       <UniqueIdentifier>{73873f30-c655-4ebd-9571-2f102fddcc44}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -17,20 +17,26 @@
     </ClCompile>
     <ClCompile Include="testclient.cpp" />
     <ClCompile Include="..\src\board.cpp">
-      <Filter>connectdisks</Filter>
+      <Filter>game</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\connectdisks.cpp">
-      <Filter>connectdisks</Filter>
+    <ClCompile Include="..\src\game.cpp">
+      <Filter>game</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\connectdisks\client.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\logging.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\signals_helper.hpp">
+    <ClInclude Include="..\include\signals-helper.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\type-utility.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\four-across\networking\client\client.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\four-across\networking\messaging.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
