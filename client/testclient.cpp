@@ -5,7 +5,7 @@
 #include <iostream>
 #include <thread>
 
-using game::client::Client;
+using game::networking::client::Client;
 using game::FourAcross;
 
 std::unique_ptr<Client> gameClient;
@@ -20,19 +20,22 @@ void runClient();
 void onConnect(uint8_t id);
 void onDisconnect();
 
-void onGameStart(uint8_t numPlayers, uint8_t first, 
-				 uint8_t cols, uint8_t rows);
+void onGameStart(uint8_t numPlayers, uint8_t first, uint8_t cols, uint8_t rows);
 void onGameEnd(uint8_t winner);
 
-uint8_t onTakeTurn();
+void onTakeTurn();
 void onTurnResult(FourAcross::TurnResult result, uint8_t column);
 
 void onUpdate(uint8_t player, uint8_t col);
 
-// Prompts user to input that they're ready to play
+/*
+	User input prompts
+*/
+
+// Asks if user is ready to play
 bool getUserReady();
 
-// Prompts user if they want to play again in same lobby
+// Asks if user wants to rematch (stay in same lobby)
 bool getUserRematch();
 
 int main(int argc, char* argv[])
@@ -60,13 +63,10 @@ void runClient()
 		gameClient->addConnectHandler(onConnect);
 		gameClient->addDisconnectHandler(onDisconnect);
 
-		gameClient->addReadyStatusHandler(getUserReady);
-		gameClient->addRematchStatusHandler(getUserRematch);
-
 		gameClient->addGameStartHandler(onGameStart);
 		gameClient->addGameEndHandler(onGameEnd);
 
-		gameClient->addTurnHandler(onTakeTurn);
+		gameClient->addTurnRequestHandler(onTakeTurn);
 		gameClient->addTurnResultHandler(onTurnResult);
 		gameClient->addGameUpdateHandler(onUpdate);
 
@@ -122,11 +122,24 @@ bool getUserRematch()
 void onConnect(uint8_t id)
 {
 	std::cout << "You have connected to the game server. Your id is " << static_cast<int>(id) << "\n";
+	// ask if user is ready and quit if not
+	auto ready = getUserReady();
+	if (ready)
+	{
+		gameClient->toggleReady();
+	}
+	else
+	{
+		gameClient->disconnect();
+	}
 }
 
 void onDisconnect()
 {
 	std::cout << "You have disconnected from the game server.\n";
+	
+	// can either connect to server again, or exit process
+	exit(EXIT_SUCCESS); // for now just exit
 }
 
 void onGameStart(uint8_t numPlayers, uint8_t first,
@@ -151,9 +164,21 @@ void onGameEnd(uint8_t winner)
 		std::cout << "You can exit this window to leave\n";
 	}
 
+	// ask if user wants to play again
+	bool rematch = getUserRematch();
+	if (rematch)
+	{
+		// indicate that user is ready to play, stay in lobby
+		gameClient->toggleReady();
+	}
+	else
+	{
+		// disconnect from lobby
+		gameClient->disconnect();
+	}
 }
 
-uint8_t onTakeTurn()
+void onTakeTurn()
 {
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "It's your turn!\n"
@@ -184,7 +209,8 @@ uint8_t onTakeTurn()
 		}
 		std::cout << "Invalid input, try again: ";
 	}
-	return static_cast<uint8_t>(column) - 1;
+	
+	gameClient->takeTurn(column - 1);
 }
 
 void onTurnResult(FourAcross::TurnResult result, uint8_t column)

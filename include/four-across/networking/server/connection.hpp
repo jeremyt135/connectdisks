@@ -15,70 +15,66 @@
 
 namespace game
 {
-	namespace server
+	namespace networking
 	{
-		class GameLobby;
-
-		/* 
-			Maintains connection from clients and handles socket I/O.
-		*/
-		class Connection : public std::enable_shared_from_this<Connection>
+		namespace server
 		{
-			ADD_SIGNAL(Disconnect, disconnected, void, std::shared_ptr<Connection>)
-			ADD_SIGNAL(Ready, readied, void, std::shared_ptr<Connection>)
-			ADD_SIGNAL(Turn, tookTurn, void, std::shared_ptr<Connection>, uint8_t)
-			
-		public:
-			static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
+			class GameLobby;
 
-			// Starts an async read from the socket
-			void waitForMessages();
+			/*
+				Maintains connection from clients and handles socket I/O.
+			*/
+			class Connection : public std::enable_shared_from_this<Connection>
+			{
+				ADD_SIGNAL(Disconnect, disconnected, void, std::shared_ptr<Connection>)
+					ADD_SIGNAL(Ready, readied, void, std::shared_ptr<Connection>)
+					ADD_SIGNAL(Turn, tookTurn, void, std::shared_ptr<Connection>, uint8_t)
 
-			// Sets the id that the player should have
-			void setId(uint8_t id);
+			public:
+				static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
-			uint8_t getId() const noexcept;
+				// Starts an async read from the socket
+				void waitForMessages();
 
-			// Sets the GameLobby that this is connected to
-			void setGameLobby(GameLobby* lobby);
+				// Sets the id that the player should have
+				void setId(uint8_t id);
 
-			boost::asio::ip::tcp::socket& getSocket();
-		private:
-			Connection(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
+				uint8_t getId() const noexcept;
 
-			void onTurn(uint8_t playerId);
-			void onGameStart();
-			void onGameEnd(uint8_t winner);
-			void onUpdate(uint8_t playerId, uint8_t col, FourAcross::TurnResult result);
+				// Sets the GameLobby that this is connected to
+				void setGameLobby(GameLobby* lobby);
 
-			// Sends a message to client
-			void sendMessage(std::shared_ptr<server::Message> message);
+				boost::asio::ip::tcp::socket& getSocket();
+			private:
+				Connection(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
-			void sendWinner(uint8_t winner);
+				void onTurn(uint8_t playerId);
+				void onGameStart();
+				void onGameEnd(uint8_t winner);
+				void onUpdate(uint8_t playerId, uint8_t col, FourAcross::TurnResult result);
 
-			// Sends message to client asking if they want to stay in lobby
-			void askForRematch();
-			// Sends confirmation to client that rematch request is received
-			void confirmRematch();
+				// Sends a message to client
+				void sendMessage(std::shared_ptr<Message> message);
 
-			void disconnect();
+				void sendWinner(uint8_t winner);
 
-			// Handles messages from the client on other end of connection
-			void handleRead(std::shared_ptr<client::Message> message, const boost::system::error_code& error, size_t len);
+				void disconnect();
 
-			// Handles result of sending message to client
-			void handleWrite(std::shared_ptr<server::Message> message, const  boost::system::error_code& error, size_t len);
+				// Handles messages from the client on other end of connection
+				void handleRead(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
 
-			void handleDisconnect();
-			void handleClientReady();
-			void handleTurnResult(FourAcross::TurnResult result, uint8_t column);
+				// Handles result of sending message to client
+				void handleWrite(std::shared_ptr<Message> message, const  boost::system::error_code& error, size_t len);
 
-			void handleRematch(bool shouldRematch);
+				void handleDisconnect();
+				void handleClientReady();
+				void handleTurnResult(FourAcross::TurnResult result, uint8_t column);
 
-			GameLobby* lobby;
+				GameLobby* lobby;
 
-			boost::asio::ip::tcp::socket socket;
-			uint8_t id;
-		};
+				boost::asio::ip::tcp::socket socket;
+				uint8_t id;
+			};
+		}
 	}
 }

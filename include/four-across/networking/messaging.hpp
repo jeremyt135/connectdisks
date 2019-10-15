@@ -5,20 +5,21 @@
 
 namespace game
 {
-	namespace server
+	namespace networking
 	{
-		// Type of message sent to Client from Server
-		enum class Response : uint8_t
+		enum class MessageType : uint8_t
 		{
 			/*
-				Some error state occurred in server
+				Some error state occurred
 			*/
-			error,		
+			error,
+
 			/*
 				Client successfully connected:
 				data[0]: Client's player id for the game
 			*/
 			connected,
+
 			/*
 				Game lobby has started:
 				data[0]: number of players
@@ -26,77 +27,47 @@ namespace game
 				data[2]: number of board rows
 				data[3]: first player to move
 			*/
-			gameStart, 
+			gameStart,
+
 			/*
 				Game lobby has ended:
 				data[0]: id of winning player
 			*/
-			gameEnd, 
+			gameEnd,
+
 			/*
-				Client should take their turn
+				Client is ready to play
+				data[0]: client id
 			*/
-			takeTurn, 
+			ready,
+
+			/*
+				Server wants a client to move or client has moved
+				data[0]: client id
+				data[1]: column (-1 if requesting turn)
+			*/
+			takeTurn,
+
 			/*
 				Game lobby has result of client's turn taken:
 				data[0]: turn result as type ConnectDisks::TurnResult
 				data[1]: column
 			*/
-			turnResult, 
+			turnResult,
+
 			/*
 				Game lobby has result of opponent client's turn taken:
-				data[0]: playerId
+				data[0]: client id
 				data[1]: column
 			*/
-			update, 
-			/*
-				Game lobby wants to know if client is staying in lobby for rematch:
-				data[0]: 1 (true) if contains data from Client
-				data[1]: 1 (true) if Client wants to rematch
-			*/
-			rematch
+			update,
 		};
 		/*
 			Contains data to pass from server to client
 		*/
 		struct Message
 		{
-			Response response;
-			std::array<uint8_t, 16> data;
-		};
-	}
-
-	namespace client
-	{
-		// Type of message sent to Server from Client
-		enum class Response : uint8_t
-		{
-			/*
-				Some error state occurred in Client
-			*/
-			error, 
-			/*
-				Client is ready to play
-			*/
-			ready, 
-			/*
-				Client has their turn:
-				data[0]: column they want to move in
-			*/
-			turn, 
-			/*
-				Client wants to rematch (similar to server::Response):
-				data[0]: 1 (true), error if 0
-				data[1]: 1 (true) if Client wants to rematch
-			*/
-			rematch
-		};
-
-		/*
-			Contains data to pass from client to server
-		*/
-		struct Message
-		{
-			Response response;
+			MessageType type;
 			std::array<uint8_t, 16> data;
 		};
 	}

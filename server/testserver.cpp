@@ -5,7 +5,7 @@
 #include <iostream>
 #include <thread>
 
-using game::server::Server;
+using game::networking::server::Server;
 
 void runServer()
 {
