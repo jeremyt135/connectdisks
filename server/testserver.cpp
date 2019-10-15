@@ -3,7 +3,6 @@
 #include <boost/asio.hpp>
 
 #include <iostream>
-#include <thread>
 
 using game::networking::server::Server;
 

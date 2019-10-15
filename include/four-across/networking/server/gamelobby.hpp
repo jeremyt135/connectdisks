@@ -9,12 +9,9 @@
 
 #include <boost/asio.hpp>
 
-#include <atomic>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace game

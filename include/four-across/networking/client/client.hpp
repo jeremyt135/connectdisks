@@ -10,7 +10,6 @@
 #include <boost/asio.hpp>
 
 #include <functional>
-#include <future>
 #include <memory>
 #include <string>
 

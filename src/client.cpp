@@ -8,7 +8,6 @@
 
 #include <array>
 #include <iostream>
-#include <thread>
 
 using boost::asio::ip::address_v4;
 using boost::asio::ip::tcp;

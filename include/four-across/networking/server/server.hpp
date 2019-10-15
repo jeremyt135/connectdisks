@@ -5,9 +5,7 @@
 #include <boost/asio.hpp>
 
 #include <memory>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace game
