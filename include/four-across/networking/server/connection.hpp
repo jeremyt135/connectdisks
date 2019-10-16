@@ -25,8 +25,8 @@ namespace game
 			class Connection : public std::enable_shared_from_this<Connection>
 			{
 				ADD_SIGNAL(Disconnect, disconnected, void, std::shared_ptr<Connection>)
-					ADD_SIGNAL(Ready, readied, void, std::shared_ptr<Connection>)
-					ADD_SIGNAL(Turn, tookTurn, void, std::shared_ptr<Connection>, uint8_t)
+				ADD_SIGNAL(Ready, readied, void, std::shared_ptr<Connection>)
+				ADD_SIGNAL(Turn, tookTurn, void, std::shared_ptr<Connection>, uint8_t)
 
 			public:
 				static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
@@ -37,10 +37,16 @@ namespace game
 				// Sets the id that the player should have
 				void setId(uint8_t id);
 
+				void onAccept();
+
+				bool isAlive() const noexcept;
 				uint8_t getId() const noexcept;
 
 				// Sets the GameLobby that this is connected to
 				void setGameLobby(GameLobby* lobby);
+
+				// Notifies Connection of their position in queue
+				void notifyQueuePosition(uint64_t position);
 
 				boost::asio::ip::tcp::socket& getSocket();
 			private:
@@ -56,22 +62,30 @@ namespace game
 
 				void sendWinner(uint8_t winner);
 
-				void disconnect();
-
 				// Handles messages from the client on other end of connection
-				void handleRead(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
+				void onReadSocket(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
 
 				// Handles result of sending message to client
-				void handleWrite(std::shared_ptr<Message> message, const  boost::system::error_code& error, size_t len);
+				void onWriteSocket(std::shared_ptr<Message> message, const  boost::system::error_code& error, size_t len);
 
 				void handleDisconnect();
 				void handleClientReady();
 				void handleTurnResult(FourAcross::TurnResult result, uint8_t column);
 
-				GameLobby* lobby;
+				// Pings and checks if received pong from Client
+				void pingOnTimer(const boost::system::error_code& error, boost::asio::steady_timer* timer);
+				void sendPing();
+				void startPings();
 
 				boost::asio::ip::tcp::socket socket;
+				boost::asio::steady_timer pingTimer;
+
+				GameLobby* lobby;
+
 				uint8_t id;
+				bool clientIsConnected;
+				bool receivedPong;
+				uint8_t missedPongs;
 			};
 		}
 	}

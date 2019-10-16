@@ -4,6 +4,7 @@
 
 #include <boost/asio.hpp>
 
+#include <list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -38,14 +39,21 @@ namespace game
 				static constexpr uint8_t maxLobbies{4};
 
 				void waitForConnections();
-				void handleConnection(std::shared_ptr<Connection> connection, const boost::system::error_code& error);
+				void onConnectionAccepted(std::shared_ptr<Connection> connection, const boost::system::error_code& error);
+
+				void addToQueue(std::shared_ptr<Connection> connection);
+				void updateQueuePositions(const boost::system::error_code& error, boost::asio::steady_timer* timer);
 
 				GameLobby* findAvailableLobby();
 				GameLobby* makeNewLobby();
+				void onLobbyAvailable(GameLobby* lobby);
 
 				boost::asio::io_service& ioService;
 				boost::asio::ip::tcp::acceptor acceptor;
+				boost::asio::steady_timer queueUpdateTimer;
 
+				size_t lastQueueSize;
+				std::list<std::shared_ptr<Connection>> playerQueue;
 				std::vector<std::unique_ptr<GameLobby>> lobbies;
 			};
 		}

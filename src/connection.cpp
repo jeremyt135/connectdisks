@@ -4,6 +4,8 @@
 #include "type-utility.hpp"
 #include "logging.hpp"
 
+#include <boost/endian/conversion.hpp>
+
 #include <algorithm>
 #include <iostream>
 #include <functional>
@@ -60,14 +62,19 @@ namespace game
 
 			void Connection::waitForMessages()
 			{
+				if (!clientIsConnected)
+				{
+					return;
+				}
+
 				printDebug("Connection waiting to read message\n");
 				// read a message from the client, handle in handleRead
 				std::shared_ptr<Message> message{new Message{}};
 				boost::asio::async_read(socket,
 					boost::asio::buffer(message.get(), sizeof(Message)),
 					std::bind(
-						&Connection::handleRead,
-						this,
+						&Connection::onReadSocket,
+						shared_from_this(),
 						message,
 						std::placeholders::_1,
 						std::placeholders::_2
@@ -88,6 +95,17 @@ namespace game
 				}
 			}
 
+			void Connection::onAccept()
+			{
+				waitForMessages();
+				startPings();
+			}
+
+			bool Connection::isAlive() const noexcept
+			{
+				return clientIsConnected;
+			}
+
 			uint8_t Connection::getId() const noexcept
 			{
 				return id;
@@ -101,10 +119,23 @@ namespace game
 				using std::bind;
 
 				this->lobby = lobby;
-				lobby->addTurnHandler(GameLobby::TurnHandler(bind(&Connection::onTurn, this, _1)).track_foreign(shared_from_this()));
-				lobby->addTurnResultHandler(GameLobby::TurnResultHandler(bind(&Connection::onUpdate, this, _1, _2, _3)).track_foreign(shared_from_this()));
-				lobby->addGameStartHandler(GameLobby::GameStartHandler(bind(&Connection::onGameStart, this)).track_foreign(shared_from_this()));
-				lobby->addGameEndHandler(GameLobby::GameEndHandler(bind(&Connection::onGameEnd, this, _1)).track_foreign(shared_from_this()));
+				lobby->addTurnHandler(
+					GameLobby::TurnHandler(bind(&Connection::onTurn, shared_from_this(), _1)).track_foreign(shared_from_this()));
+				lobby->addTurnResultHandler(
+					GameLobby::TurnResultHandler(bind(&Connection::onUpdate, shared_from_this(), _1, _2, _3)).track_foreign(shared_from_this()));
+				lobby->addGameStartHandler(
+					GameLobby::GameStartHandler(bind(&Connection::onGameStart, shared_from_this())).track_foreign(shared_from_this()));
+				lobby->addGameEndHandler(
+					GameLobby::GameEndHandler(bind(&Connection::onGameEnd, shared_from_this(), _1)).track_foreign(shared_from_this()));
+			}
+
+			void Connection::notifyQueuePosition(uint64_t position)
+			{
+				std::shared_ptr<Message> message{new Message{}};
+				boost::endian::native_to_big_inplace(position);
+				message->type = MessageType::inQueue;
+				memcpy(&message->data[0], &position, sizeof(uint64_t));
+				sendMessage(message);
 			}
 
 			boost::asio::ip::tcp::socket& Connection::getSocket()
@@ -115,7 +146,11 @@ namespace game
 			Connection::Connection(boost::asio::io_service & ioService, GameLobby* lobby) :
 				lobby{lobby},
 				socket{ioService},
-				id{0}
+				pingTimer{ioService},
+				id{0},
+				clientIsConnected{true},
+				receivedPong{false},
+				missedPongs{0}
 			{
 			}
 
@@ -156,18 +191,23 @@ namespace game
 
 			void Connection::sendMessage(std::shared_ptr<Message> message)
 			{
+				if (!clientIsConnected)
+				{
+					return;
+				}
+
 				boost::asio::async_write(socket,
 					boost::asio::buffer(message.get(), sizeof(Message)),
 					std::bind(
-						&Connection::handleWrite,
-						this,
+						&Connection::onWriteSocket,
+						shared_from_this(),
 						message,
 						std::placeholders::_1,
 						std::placeholders::_2
 					));
 			}
 
-			void Connection::handleRead(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
+			void Connection::onReadSocket(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
 			{
 				printDebug("Connection trying to read message\n");
 				if (!error.failed())
@@ -203,6 +243,10 @@ namespace game
 						}
 					}
 					break;
+					case MessageType::pong:
+						printDebug("PONG\n");
+						receivedPong = true;
+						break;
 					default:
 						break;
 					}
@@ -226,7 +270,7 @@ namespace game
 
 			}
 
-			void Connection::handleWrite(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
+			void Connection::onWriteSocket(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
 			{
 				if (!error.failed())
 				{
@@ -240,8 +284,12 @@ namespace game
 
 			void Connection::handleDisconnect()
 			{
-				printDebug("Connection::handleRead: error: client disconnected\n");
-				disconnected(shared_from_this());
+				if (clientIsConnected)
+				{
+					printDebug("Connection::handleRead: error: client disconnected\n");
+					clientIsConnected = false;
+					disconnected(shared_from_this());
+				}
 			}
 
 			void Connection::handleClientReady()
@@ -260,10 +308,55 @@ namespace game
 				sendMessage(message);
 			}
 
-			void Connection::disconnect()
+			void Connection::pingOnTimer(const boost::system::error_code & error, boost::asio::steady_timer * timer)
 			{
-				// tell lobby we're leaving
-				disconnected(shared_from_this());
+				if (error)
+				{
+					printDebug("Connection::pingClient error: ", error.message(), "\n");
+					return;
+				}
+				if (clientIsConnected)
+				{
+					if (receivedPong)
+					{
+						receivedPong = false;
+						missedPongs = 0; // misses don't matter if alive
+
+						// received last pong, send another
+						sendPing();
+						timer->expires_from_now(boost::asio::chrono::seconds(10));
+						timer->async_wait(std::bind(&Connection::pingOnTimer, shared_from_this(), std::placeholders::_1, timer));
+					}
+					else
+					{
+						printDebug("Connection did not receive PONG\n");
+						++missedPongs;
+						if (missedPongs > 3)
+						{
+							// did not receive any pong, assume client is lost
+							handleDisconnect();
+						}
+						else
+						{
+							sendPing();
+							timer->expires_from_now(boost::asio::chrono::seconds(10));
+							timer->async_wait(std::bind(&Connection::pingOnTimer, shared_from_this(), std::placeholders::_1, timer));
+						}
+					}
+				}
+			}
+			void Connection::sendPing()
+			{
+				printDebug("PING\n");
+				std::shared_ptr<Message> message{new Message{}};
+				message->type = MessageType::ping;
+				sendMessage(message);
+			}
+			void Connection::startPings()
+			{
+				sendPing();
+				pingTimer.expires_from_now(boost::asio::chrono::seconds(10));
+				pingTimer.async_wait(std::bind(&Connection::pingOnTimer, shared_from_this(), std::placeholders::_1, &pingTimer));
 			}
 		}
 	}

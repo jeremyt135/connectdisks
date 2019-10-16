@@ -7,6 +7,7 @@
 #include "logging.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <functional>
 
@@ -24,9 +25,13 @@ namespace game
 				std::string address, uint16_t port
 			) :
 				ioService{ioService},
-				acceptor{ioService, tcp::endpoint{address_v4::from_string(address), port}}
+				acceptor{ioService, tcp::endpoint{address_v4::from_string(address), port}},
+				queueUpdateTimer{ioService},
+				lastQueueSize{0}
 			{
 				waitForConnections();
+				queueUpdateTimer.expires_from_now(boost::asio::chrono::seconds(30));
+				queueUpdateTimer.async_wait(std::bind(&Server::updateQueuePositions, this, std::placeholders::_1, &queueUpdateTimer));
 			}
 
 			Server::~Server()
@@ -42,16 +47,18 @@ namespace game
 				acceptor.async_accept(
 					connection->getSocket(),
 					std::bind(
-						&Server::handleConnection, this,
+						&Server::onConnectionAccepted, this,
 						connection, std::placeholders::_1));
 			}
 
-			void Server::handleConnection(std::shared_ptr<Connection> connection, const boost::system::error_code & error)
+			void Server::onConnectionAccepted(std::shared_ptr<Connection> connection, const boost::system::error_code & error)
 			{
 				print("Server trying to accept connection\n");
 
 				if (!error.failed())
 				{
+					connection->onAccept();
+
 					const auto numLobbies = lobbies.size();
 					print("Server accepted connection, there are ", numLobbies, " lobbies \n");
 					// assign connection to an existing lobby if one exists
@@ -75,7 +82,8 @@ namespace game
 							}
 							else
 							{
-								print("Server at lobby cap, not adding player\n");
+								print("Server at lobby cap, adding player to queue\n");
+								addToQueue(connection);
 							}
 						}
 					}
@@ -89,7 +97,8 @@ namespace game
 						}
 						else
 						{
-							print("Server at lobby cap, not adding player\n");
+							print("Server at lobby cap, adding player to queue\n");
+							addToQueue(connection);
 						}
 					}
 				}
@@ -99,9 +108,37 @@ namespace game
 					return;
 				}
 
-				print("Added player\n");
-
 				waitForConnections();
+			}
+
+			void Server::addToQueue(std::shared_ptr<Connection> connection)
+			{
+				playerQueue.push_back(connection);
+				connection->notifyQueuePosition(playerQueue.size());
+			}
+
+			void Server::updateQueuePositions(const boost::system::error_code & error, boost::asio::steady_timer * timer)
+			{
+				// remove players that have closed their connection
+				playerQueue.remove_if([](std::shared_ptr<Connection> connection){ return !connection->isAlive(); });
+
+				// notify remaining players
+				auto queueSize = playerQueue.size();
+				auto delta = queueSize > lastQueueSize ? queueSize - lastQueueSize : lastQueueSize - queueSize;
+				if (queueSize > 0 && (queueSize < 10 || delta >= 10))
+				{
+					size_t pos{1};
+					for (auto playerIter = playerQueue.begin(); playerIter != playerQueue.end(); ++playerIter, ++pos)
+					{
+						auto player = *playerIter;
+						player->notifyQueuePosition(pos);
+					}
+				}
+				lastQueueSize = queueSize;
+
+				// set timer to go again a minute from now
+				timer->expires_from_now(boost::asio::chrono::seconds(30));
+				timer->async_wait(std::bind(&Server::updateQueuePositions, this, std::placeholders::_1, timer));
 			}
 
 			GameLobby * Server::findAvailableLobby()
@@ -127,8 +164,18 @@ namespace game
 				print("Making new lobby\n");
 				lobbies.emplace_back(new GameLobby{}); // make a new lobby using default number of max players
 				auto lobby = lobbies.back().get();
+				lobby->addLobbyAvailableHandler(std::bind(&Server::onLobbyAvailable, this, std::placeholders::_1));
 				lobby->start();
 				return lobby;
+			}
+			void Server::onLobbyAvailable(GameLobby * lobby)
+			{
+				if (playerQueue.size() > 0)
+				{
+					auto player = playerQueue.front();
+					lobby->addPlayer(player);
+					playerQueue.pop_front();
+				}
 			}
 		}
 	}

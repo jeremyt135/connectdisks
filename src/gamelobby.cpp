@@ -54,13 +54,19 @@ namespace game
 					// reset connection pointer
 					playerIter->reset();
 
-					--numPlayers;
+					if (numPlayers > 0)
+					{
+						--numPlayers;
+					}
+					canAddPlayers = true;
+
+					lobbyAvailable(this);
+
 					if (numReady > 0)
 					{
 						--numReady;
 					}
 
-					canAddPlayers = true;
 
 					print("GameLobby[", this, "]: player disconnected; remaining: ", static_cast<int>(numPlayers), "\n");
 
@@ -69,7 +75,11 @@ namespace game
 						stopGame();
 					}
 				}
-
+				else
+				{
+					// didn't find id in lobby
+					printDebug("GameLobby[", this, "]: player disconnected, but didn't find ID in lobby\n");
+				}
 			}
 
 			void GameLobby::onReady(std::shared_ptr<Connection> connection)
@@ -165,7 +175,6 @@ namespace game
 
 				players[id]->setId(id + 1);
 				players[id]->setGameLobby(this);
-				players[id]->waitForMessages();
 				connection->addDisconnectHandler(bind(&GameLobby::onDisconnect, this, _1));
 				connection->addReadyHandler(bind(&GameLobby::onReady, this, _1));
 				connection->addTurnHandler(bind(&GameLobby::onTakeTurn, this, _1, _2));

@@ -27,10 +27,11 @@ namespace game
 			class GameLobby
 			{
 				ADD_SIGNAL(GameStart, gameStarted, void)
-					ADD_SIGNAL(GameEnd, gameEnded, void, uint8_t)
-					ADD_SIGNAL(Turn, takeTurn, void, uint8_t)
-					ADD_SIGNAL(TurnResult, tookTurn, void, uint8_t, uint8_t, FourAcross::TurnResult)
+				ADD_SIGNAL(GameEnd, gameEnded, void, uint8_t)
+				ADD_SIGNAL(Turn, takeTurn, void, uint8_t)
+				ADD_SIGNAL(TurnResult, tookTurn, void, uint8_t, uint8_t, FourAcross::TurnResult)
 
+				ADD_SIGNAL(LobbyAvailable, lobbyAvailable, void, GameLobby*)
 			public:
 				GameLobby(uint8_t maxPlayers = FourAcross::minNumPlayers);
 

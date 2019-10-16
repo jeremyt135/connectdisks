@@ -19,6 +19,20 @@ namespace game
 				data[0]: Client's player id for the game
 			*/
 			connected,
+			/*
+				Server checking if Client is alive
+			*/
+			ping,
+			/*
+				Client confirming they are alive
+			*/
+			pong,
+			/*
+				Client connected to server but is in
+				queue for a game lobby.
+				- first 8 bytes of data contains position
+			*/
+			inQueue,
 
 			/*
 				Game lobby has started:

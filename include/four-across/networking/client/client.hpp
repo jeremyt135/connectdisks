@@ -31,6 +31,8 @@ namespace game
 				*/
 				// User has successfully connected & should ready when they want to play
 				ADD_SIGNAL(Connect, connected, void, uint8_t)
+				// User connected but is in queue and will receive queue position updates
+				ADD_SIGNAL(QueueUpdate, queueUpdated, void, uint64_t)
 				// User has successfully disconnected
 				ADD_SIGNAL(Disconnect, disconnected, void)
 				// Game has started
@@ -59,9 +61,6 @@ namespace game
 				// should call this function only after connecting to a server successfully.
 				void toggleReady();
 
-				// Disconnects from game server.
-				void disconnect();
-
 				// Attempts to take the user's desired turn. Users should only call this 
 				// function after their TurnRequest handler is called.
 				void takeTurn(uint8_t column);
@@ -73,11 +72,12 @@ namespace game
 				void waitForMessages();
 
 				// Socket I/O callbacks
-				void onConnect(const boost::system::error_code& error);
+				void onConnected(const boost::system::error_code& error);
 				void onReadSocket(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
 				void onWriteSocket(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
 
 				void sendMessage(Message* message);
+				void sendPong();
 
 				void handleDisconnect();
 
@@ -92,6 +92,8 @@ namespace game
 				boost::asio::ip::tcp::socket socket;
 
 				uint8_t playerId;
+				bool isConnected;
+
 				std::unique_ptr<FourAcross> game;
 			};
 		}

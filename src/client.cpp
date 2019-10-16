@@ -6,6 +6,8 @@
 #include "type-utility.hpp"
 #include "logging.hpp"
 
+#include <boost/endian/conversion.hpp>
+
 #include <array>
 #include <iostream>
 
@@ -24,6 +26,7 @@ namespace game
 				:
 				socket{ioService},
 				playerId{0},
+				isConnected{false},
 				game{nullptr}
 			{
 			}
@@ -43,7 +46,6 @@ namespace game
 					printDebug("Client::connectToServer: error: ", error.what(), "\n");
 					throw;
 				}
-
 				waitForMessages();
 			}
 
@@ -54,11 +56,6 @@ namespace game
 				message->type = MessageType::ready;
 				message->data[0] = playerId;
 				sendMessage(message);
-			}
-
-			void Client::disconnect()
-			{
-				handleDisconnect();
 			}
 
 			void Client::waitForMessages()
@@ -77,7 +74,7 @@ namespace game
 					));
 			}
 
-			void Client::onConnect(const boost::system::error_code & error)
+			void Client::onConnected(const boost::system::error_code & error)
 			{
 				if (!error.failed())
 				{
@@ -106,8 +103,23 @@ namespace game
 					{
 					case MessageType::connected:
 						setPlayerId(message->data[0]);
+						isConnected = true;
 						connected(playerId);
 						break;
+					case MessageType::inQueue:
+					{
+						uint64_t position{0};
+						memcpy(&position, &message->data[0], sizeof(uint64_t));
+						boost::endian::big_to_native_inplace(position);
+						queueUpdated(position);
+					}
+					break;
+					case MessageType::ping:
+					{
+						printDebug("PONG\n");
+						//sendPong();
+					}
+					break;
 					case MessageType::gameStart:
 					{
 						const auto numPlayers = message->data[0];
@@ -204,6 +216,7 @@ namespace game
 			void Client::handleDisconnect()
 			{
 				//closeSocket();
+				isConnected = false;
 				disconnected(); // tell lobby we're disconnecting
 			}
 
@@ -219,6 +232,13 @@ namespace game
 						std::placeholders::_1,
 						std::placeholders::_2
 					));
+			}
+
+			void Client::sendPong()
+			{
+				auto message = new Message{};
+				message->type = MessageType::pong;
+				sendMessage(message);
 			}
 
 			void Client::startGame(uint8_t numPlayers, uint8_t first, uint8_t cols, uint8_t rows)
