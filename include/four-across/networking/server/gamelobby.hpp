@@ -67,20 +67,19 @@ namespace game
 
 				// Starts the game, locking players list and notifying players
 				void startGame();
-				// Aborts the game without a winner
-				void stopGame();
 				// Starts the lobby, allowing players to be added
 				void startLobby();
-				// Notifies connections that the game ended with a winner.
+				// Notifies connections that the game ended with (or without) a winner.
 				void onGameOver();
 
 				bool allPlayersAreReady() const noexcept;
+
+				bool canAddPlayers() const noexcept;
 
 				uint8_t getFirstAvailableId() const;
 
 				bool lobbyIsOpen;
 				bool isPlayingGame;
-				bool canAddPlayers;
 
 				std::unique_ptr<FourAcross> game;
 				uint8_t maxPlayers;

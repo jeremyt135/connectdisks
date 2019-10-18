@@ -20,7 +20,6 @@ namespace game
 		{
 			GameLobby::GameLobby(uint8_t maxPlayers) :
 				lobbyIsOpen{false},
-				canAddPlayers{false},
 				isPlayingGame{false},
 				maxPlayers{maxPlayers},
 				numReady{0},
@@ -33,56 +32,9 @@ namespace game
 			{
 			}
 
-			void GameLobby::start()
-			{
-				startLobby();
-			}
-
-			void GameLobby::startLobby()
-			{
-				lobbyIsOpen = true;
-				canAddPlayers = true;
-				print("GameLobby [", this, "]: has started\n");
-			}
-
-			void GameLobby::startGame()
-			{
-				isPlayingGame = true;
-				canAddPlayers = false;
-
-				gameStarted();
-				takeTurn(game->getCurrentPlayer());
-			}
-
-			void GameLobby::stopGame()
-			{
-				// stop playing if lost a player
-				print("GameLobby [", this, "]: is stopping game\n");
-				numReady = 0;
-				isPlayingGame = false;
-				game.reset();
-				gameEnded(game->noWinner);
-			}
-
-			void GameLobby::onGameOver()
-			{
-				// no longer playing a game but do not tell players game is over again
-				if (game->hasWinner())
-				{
-					gameEnded(game->getWinner());
-				}
-				else
-				{
-					gameEnded(game->noWinner);
-				}
-				isPlayingGame = false;
-				numReady = 0;
-				game.reset();
-			}
-
 			void GameLobby::addPlayer(std::shared_ptr<Connection> connection)
 			{
-				if (!canAddPlayers)
+				if (!canAddPlayers())
 				{
 					return;
 				}
@@ -90,7 +42,6 @@ namespace game
 				const auto id = getFirstAvailableId();
 
 				players[id] = connection;
-
 				players[id]->setId(id + 1);
 				players[id]->setGameLobby(this);
 
@@ -98,10 +49,11 @@ namespace game
 					using std::placeholders::_1;
 					using std::placeholders::_2;
 					using std::bind;
-					connection->addDisconnectHandler(bind(&GameLobby::onDisconnect, this, _1));
-					connection->addReadyHandler(bind(&GameLobby::onReady, this, _1));
-					connection->addTurnHandler(bind(&GameLobby::onTakeTurn, this, _1, _2));
+					players[id]->addDisconnectHandler(bind(&GameLobby::onDisconnect, this, _1));
+					players[id]->addReadyHandler(bind(&GameLobby::onReady, this, _1));
+					players[id]->addTurnHandler(bind(&GameLobby::onTakeTurn, this, _1, _2));
 				}
+
 				++numPlayers;
 			}
 
@@ -111,6 +63,52 @@ namespace game
 				const auto iter = std::find_if(players.begin(), players.end(), [](std::shared_ptr<Connection> con){ return con == nullptr; });
 				const auto index = std::distance(players.begin(), iter);
 				return static_cast<uint8_t>(index);
+			}
+
+			void GameLobby::start()
+			{
+				startLobby();
+			}
+
+			void GameLobby::startLobby()
+			{
+				if (lobbyIsOpen)
+				{
+					return;
+				}
+				print("GameLobby [", this, "]: has started\n");
+				lobbyIsOpen = true;
+			}
+
+			void GameLobby::startGame()
+			{
+				if (lobbyIsOpen && !isPlayingGame)
+				{
+					isPlayingGame = true;
+
+					gameStarted();
+					takeTurn(game->getCurrentPlayer());
+				}
+			}
+
+			void GameLobby::onGameOver()
+			{
+				print("GameLobby [", this, "]: is stopping game\n");
+
+				// game ended, notify connections with winner, if there is one
+				if (game->hasWinner())
+				{
+					gameEnded(game->getWinner());
+				}
+				else
+				{
+					gameEnded(game->noWinner);
+				}
+
+				game.reset();
+
+				isPlayingGame = false;
+				numReady = 0;
 			}
 
 			void GameLobby::onDisconnect(std::shared_ptr<Connection> connection)
@@ -126,27 +124,30 @@ namespace game
 					});
 				if (playerIter != players.end())
 				{
+					auto playerWasReady = (*playerIter)->isReady();
+					if (playerWasReady && numReady > 0)
+					{
+						--numReady;
+					}
+
 					// start process of closing connection by releasing our handle of the shared_ptr
 					playerIter->reset();
-
 					if (numPlayers > 0)
 					{
 						--numPlayers;
-					}
-					canAddPlayers = true;
-
-					lobbyAvailable(this);
-
-					if (numReady > 0)
-					{
-						--numReady;
 					}
 
 					print("GameLobby[", this, "]: player disconnected; remaining: ", static_cast<int>(numPlayers), "\n");
 
 					if (isPlayingGame)
 					{
-						stopGame();
+						//stopGame();
+						onGameOver();
+					}
+
+					if (canAddPlayers())
+					{
+						lobbyAvailable(this);
 					}
 				}
 				else
@@ -169,7 +170,6 @@ namespace game
 					});
 				if (player != players.end())
 				{
-
 					++numReady;
 					if (allPlayersAreReady() && isFull())
 					{
@@ -236,6 +236,10 @@ namespace game
 			bool GameLobby::allPlayersAreReady() const noexcept
 			{
 				return numReady == numPlayers;
+			}
+			bool GameLobby::canAddPlayers() const noexcept
+			{
+				return lobbyIsOpen && !isPlayingGame && !isFull();
 			}
 		}
 	}

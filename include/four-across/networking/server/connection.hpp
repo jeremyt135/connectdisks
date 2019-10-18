@@ -43,6 +43,10 @@ namespace game
 				// Returns true if the client on other end of connection is verifiably still connected.
 				bool isAlive() const noexcept;
 
+				// Returns true if the client has readied up. This does not indicate if the connection
+				// is still alive and should not be used as such.
+				bool isReady() const noexcept;
+
 				uint8_t getId() const noexcept;
 
 				// Sets the GameLobby that this is connected to
@@ -86,7 +90,10 @@ namespace game
 				GameLobby* lobby;
 
 				uint8_t id;
-				bool clientIsConnected;
+
+				bool clientIsConnected; // is client connection alive (are we receiving pings)
+				bool clientIsReady; // did the client ready up? (for now this is only reset on game end)
+
 				bool receivedPong;
 				uint8_t missedPongs;
 			};

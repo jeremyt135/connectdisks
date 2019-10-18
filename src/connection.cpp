@@ -27,6 +27,7 @@ namespace game
 				pingTimer{ioService},
 				id{0},
 				clientIsConnected{true},
+				clientIsReady{false},
 				receivedPong{false},
 				missedPongs{0}
 			{
@@ -101,7 +102,7 @@ namespace game
 					}
 					break;
 					case MessageType::pong:
-						printDebug("PONG\n");
+						//printDebug("PONG\n");
 						receivedPong = true;
 						break;
 					default:
@@ -179,6 +180,7 @@ namespace game
 			void Connection::handleClientReady()
 			{
 				printDebug("Connection: client is ready\n");
+				clientIsReady = true;
 				readied(shared_from_this());
 			}
 
@@ -247,6 +249,7 @@ namespace game
 
 			void Connection::onGameEnd(uint8_t player)
 			{
+				clientIsReady = false;
 				sendWinner(player);
 			}
 
@@ -304,7 +307,6 @@ namespace game
 				{
 					if (receivedPong)
 					{
-						receivedPong = false;
 						missedPongs = 0; // misses don't matter if alive
 
 						// received last pong, send another
@@ -333,7 +335,8 @@ namespace game
 
 			void Connection::sendPing()
 			{
-				printDebug("PING\n");
+				//printDebug("PING\n");
+				receivedPong = false;
 				std::shared_ptr<Message> message{new Message{}};
 				message->type = MessageType::ping;
 				sendMessage(message);
@@ -354,6 +357,11 @@ namespace game
 			bool Connection::isAlive() const noexcept
 			{
 				return clientIsConnected;
+			}
+
+			bool Connection::isReady() const noexcept
+			{
+				return clientIsReady;
 			}
 
 			uint8_t Connection::getId() const noexcept
