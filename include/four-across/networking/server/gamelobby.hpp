@@ -71,7 +71,7 @@ namespace game
 				void stopGame();
 				// Starts the lobby, allowing players to be added
 				void startLobby();
-				// Handles any necessary end of game cleanup
+				// Notifies connections that the game ended with a winner.
 				void onGameOver();
 
 				bool allPlayersAreReady() const noexcept;
