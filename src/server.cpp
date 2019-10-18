@@ -111,6 +111,44 @@ namespace game
 				waitForConnections();
 			}
 
+			GameLobby * Server::findAvailableLobby()
+			{
+				// find a lobby that isn't full
+				auto lobby = std::find_if(
+					lobbies.begin(),
+					lobbies.end(),
+					[](std::unique_ptr<GameLobby>& gameLobby){
+						return !gameLobby->isFull();
+					}
+				);
+				if (lobby != lobbies.end())
+				{
+					print("Found lobby for new player: ", std::distance(lobbies.begin(), lobby), "\n");
+					return lobby->get();
+				}
+				return nullptr;
+			}
+
+			GameLobby * Server::makeNewLobby()
+			{
+				print("Making new lobby\n");
+				lobbies.emplace_back(new GameLobby{}); // make a new lobby using default number of max players
+				auto lobby = lobbies.back().get();
+				lobby->addLobbyAvailableHandler(std::bind(&Server::onLobbyAvailable, this, std::placeholders::_1));
+				lobby->start();
+				return lobby;
+			}
+
+			void Server::onLobbyAvailable(GameLobby * lobby)
+			{
+				if (playerQueue.size() > 0)
+				{
+					auto player = playerQueue.front();
+					lobby->addPlayer(player);
+					playerQueue.pop_front();
+				}
+			}
+
 			void Server::addToQueue(std::shared_ptr<Connection> connection)
 			{
 				playerQueue.push_back(connection);
@@ -139,43 +177,6 @@ namespace game
 				// set timer to go again a minute from now
 				timer->expires_from_now(boost::asio::chrono::seconds(30));
 				timer->async_wait(std::bind(&Server::updateQueuePositions, this, std::placeholders::_1, timer));
-			}
-
-			GameLobby * Server::findAvailableLobby()
-			{
-				// find a lobby that isn't full
-				auto lobby = std::find_if(
-					lobbies.begin(),
-					lobbies.end(),
-					[](std::unique_ptr<GameLobby>& gameLobby){
-						return !gameLobby->isFull();
-					}
-				);
-				if (lobby != lobbies.end())
-				{
-					print("Found lobby for new player: ", std::distance(lobbies.begin(), lobby), "\n");
-					return lobby->get();
-				}
-				return nullptr;
-			}
-
-			GameLobby * Server::makeNewLobby()
-			{
-				print("Making new lobby\n");
-				lobbies.emplace_back(new GameLobby{}); // make a new lobby using default number of max players
-				auto lobby = lobbies.back().get();
-				lobby->addLobbyAvailableHandler(std::bind(&Server::onLobbyAvailable, this, std::placeholders::_1));
-				lobby->start();
-				return lobby;
-			}
-			void Server::onLobbyAvailable(GameLobby * lobby)
-			{
-				if (playerQueue.size() > 0)
-				{
-					auto player = playerQueue.front();
-					lobby->addPlayer(player);
-					playerQueue.pop_front();
-				}
 			}
 		}
 	}
