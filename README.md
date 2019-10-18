@@ -18,7 +18,7 @@ Games end when there is a winner, the board is full, or a player disconnects mid
 
 Building this project requires Boost - see [Dependencies](#dependencies)
 
-The included Visual Studio solution creates its output in a directory "build/(Platform)/(Configuration)" in the root directory 
+The included Visual Studio solution creates its output in a directory "bin/(Platform)/(Configuration)" in the root directory 
 of the solution. 
 Build files for other platforms can also be made using the included CMakeLists.
 
