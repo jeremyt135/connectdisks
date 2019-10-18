@@ -6,7 +6,7 @@
 
 namespace game
 {
-	// Game board for Connect Four.
+	// Game board for Four Across games.
 	// The board is indexed starting at 0,0 for the bottom left of the board
 	// up to numColumns - 1, numRows - 1 for the top right.
 	class Board
@@ -52,8 +52,8 @@ namespace game
 		// Gets a view of an entire row of the board.
 		column_value_t getRow(uint8_t row) const;
 
-		inline uint8_t getNumColumns() const noexcept;
-		inline uint8_t getNumRows() const noexcept;
+		uint8_t getNumColumns() const noexcept;
+		uint8_t getNumRows() const noexcept;
 
 		operator std::string() const;
 
@@ -73,18 +73,18 @@ namespace game
 		grid_t columns;
 		std::vector<uint8_t> rowIndices;
 
-		inline bool isColumnFullInternal(uint8_t column) const noexcept;
+		bool isColumnFullInternal(uint8_t column) const noexcept;
 
-		inline bool isColumnInRange(uint8_t column) const noexcept;
-		inline bool isRowInRange(uint8_t row) const noexcept;
+		bool isColumnInRange(uint8_t column) const noexcept;
+		bool isRowInRange(uint8_t row) const noexcept;
 	};
 
-	uint8_t Board::getNumColumns() const noexcept
+	inline uint8_t Board::getNumColumns() const noexcept
 	{
 		return numColumns;
 	}
 
-	uint8_t Board::getNumRows() const noexcept
+	inline uint8_t Board::getNumRows() const noexcept
 	{
 		return numRows;
 	}

@@ -2,40 +2,50 @@
 
 #include "four-across/game/board.hpp"
 
+#include <string>
 #include <utility>
 
 namespace game
 {
+	/*
+		Allows clients to play a Four-Across game with multiple players.
+	*/
 	class FourAcross
 	{
 	public:
+		enum class TurnResult : uint8_t;
+
 		FourAcross(
 			uint8_t numPlayers = minNumPlayers,
 			uint8_t firstPlayer = defaultFirstPlayer,
-			uint8_t numColumns = Board::minColumns, 
+			uint8_t numColumns = Board::minColumns,
 			uint8_t numRows = Board::minRows);
 		FourAcross(FourAcross&& connect) noexcept;
 		~FourAcross();
 
 		FourAcross& operator=(FourAcross&& connect) noexcept;
 
-		enum class TurnResult : uint8_t;
+		// Takes a player's turn in the given column. Returns TurnResult::success
+		// on a valid move.
 		TurnResult takeTurn(uint8_t player, uint8_t column);
 
-		inline bool hasWinner() const noexcept; 
-		inline bool boardFull() const noexcept;
+		bool hasWinner() const noexcept;
+		bool boardFull() const noexcept;
 
-		inline uint8_t getWinner() const noexcept;
+		uint8_t getWinner() const noexcept;
 
-		// Return the id of the player who is taking their turn now
-		inline uint8_t getCurrentPlayer() const noexcept;
+		// Returns the id of the player who is taking their turn now.
+		uint8_t getCurrentPlayer() const noexcept;
 
-		inline uint8_t getNumPlayers() const noexcept;
-		inline uint32_t getNumTurns() const noexcept;
+		uint8_t getNumPlayers() const noexcept;
+		uint32_t getNumTurns() const noexcept;
 
-		inline uint8_t getNumColumns() const noexcept;
-		inline uint8_t getNumRows() const noexcept;
+		uint8_t getNumColumns() const noexcept;
+		uint8_t getNumRows() const noexcept;
 
+		// Returns a representation of the game as a Board string (showing all moves taken),
+		// the current player, the next player, the number of turns taken, and the winner (if
+		// there is one).
 		operator std::string() const;
 
 		static constexpr uint8_t noWinner{Board::emptySlot};

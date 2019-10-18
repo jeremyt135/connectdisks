@@ -164,7 +164,7 @@ namespace game
 		return strStream.str();
 	}
 
-	bool Board::isColumnFullInternal(uint8_t column) const noexcept
+	inline bool Board::isColumnFullInternal(uint8_t column) const noexcept
 	{
 		return rowIndices[column] == numRows;
 	}
