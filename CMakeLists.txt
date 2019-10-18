@@ -1,7 +1,7 @@
 # required for find_package to work with Boost 1.63 or later
 cmake_minimum_required(VERSION 3.7)
 
-project(connectdisks_cmake)
+project(fouracross)
 
 set (Boost_USE_STATIC_LIBS ON)
 
@@ -11,12 +11,9 @@ if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
 	add_definitions(-DDEBUG)
 endif()
 
-set(CONNECTDISKS_SRC src/board.cpp src/connectdisks.cpp)
-set(SERVER_SRC src/server.cpp src/connection.cpp src/gamelobby.cpp ${CONNECTDISKS_SRC})
-set(CLIENT_SRC src/client.cpp ${CONNECTDISKS_SRC})
-
-add_executable(connectdisks connectdisks/testconnectdisks.cpp ${CONNECTDISKS_SRC})
-target_include_directories(connectdisks PUBLIC "include/")
+set(FOURACROSS_SRC src/board.cpp src/game.cpp)
+set(SERVER_SRC src/server.cpp src/connection.cpp src/gamelobby.cpp ${FOURACROSS_SRC})
+set(CLIENT_SRC src/client.cpp ${FOURACROSS_SRC})
 
 add_executable(server server/testserver.cpp ${SERVER_SRC})
 target_include_directories(server PUBLIC "include/" ${Boost_INCLUDE_DIRS})
