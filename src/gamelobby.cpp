@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iostream>
 #include <functional>
+#include <random>
 #include <utility>
 
 using boost::asio::ip::address_v4;
@@ -173,7 +174,13 @@ namespace game
 					++numReady;
 					if (allPlayersAreReady() && isFull())
 					{
-						game.reset(new FourAcross{maxPlayers}); // use default that first player is id 1
+						// randomly pick first player
+						std::random_device seed;
+						std::default_random_engine engine(seed());
+						std::uniform_int_distribution<unsigned short> dist(1u, static_cast<unsigned short>(maxPlayers));
+						auto first = static_cast<uint8_t>(dist(engine));
+
+						game.reset(new FourAcross{maxPlayers, first});
 
 						// start if all players are ready
 						startGame();
