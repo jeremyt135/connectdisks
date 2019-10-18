@@ -31,15 +31,18 @@ namespace game
 			public:
 				static std::shared_ptr<Connection> create(boost::asio::io_service& ioService, GameLobby* lobby = nullptr);
 
-				// Starts an async read from the socket
+				// Starts an async read from the socket.
 				void waitForMessages();
 
-				// Sets the id that the player should have
+				// Sets the game id that the player should have. The id has no meaning outside of a GameLobby.
 				void setId(uint8_t id);
 
+				// Call from Server async_accept handler to notify this is alive.
 				void onAccept();
 
+				// Returns true if the client on other end of connection is verifiably still connected.
 				bool isAlive() const noexcept;
+
 				uint8_t getId() const noexcept;
 
 				// Sets the GameLobby that this is connected to
