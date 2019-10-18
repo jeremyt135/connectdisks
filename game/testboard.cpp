@@ -1,16 +1,16 @@
-#include "connectdisks/board.hpp"
+#include "four-across/game/board.hpp"
 
 #include <iostream>
 #include <string>
 
 int main(int argc, char* argv[])
 {
-	using namespace connectdisks;
-	const Board::board_size_t columns{7};
-	const Board::board_size_t rows{6};
+	using namespace game;
+	const uint8_t columns{7};
+	const uint8_t rows{6};
 	Board board{columns, rows};
 	std::cout << "created board(numColumns=" << static_cast<int>(board.getNumColumns()) << ", numRows=" << static_cast<int>(board.getNumRows()) << ")\n";
-	Board::player_size_t player = 1;
+	uint8_t player = 1;
 	for (int i = 0; i < columns; ++i)
 	{
 		board.dropPieceInColumn(i, player);
@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 	}
 
 	{
-		Board::player_size_t playerAt = board.getDiskOwnerAt(0, 0);
+		uint8_t playerAt = board.getDiskOwnerAt(0, 0);
 		std::cout << "player at 0,0: " << static_cast<int>(playerAt) << "\n";
 	}
 	

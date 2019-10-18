@@ -19,17 +19,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\connectdisks\connection.hpp" />
-    <ClInclude Include="..\include\connectdisks\gamelobby.hpp" />
-    <ClInclude Include="..\include\connectdisks\messaging.hpp" />
-    <ClInclude Include="..\include\connectdisks\server.hpp" />
+    <ClInclude Include="..\include\four-across\networking\messaging.hpp" />
+    <ClInclude Include="..\include\four-across\networking\server\connection.hpp" />
+    <ClInclude Include="..\include\four-across\networking\server\gamelobby.hpp" />
+    <ClInclude Include="..\include\four-across\networking\server\server.hpp" />
     <ClInclude Include="..\include\logging.hpp" />
-    <ClInclude Include="..\include\signals_helper.hpp" />
+    <ClInclude Include="..\include\signals-helper.hpp" />
+    <ClInclude Include="..\include\type-utility.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\board.cpp" />
-    <ClCompile Include="..\src\connectdisks.cpp" />
     <ClCompile Include="..\src\connection.cpp" />
+    <ClCompile Include="..\src\game.cpp" />
     <ClCompile Include="..\src\gamelobby.cpp" />
     <ClCompile Include="..\src\server.cpp" />
     <ClCompile Include="testserver.cpp" />

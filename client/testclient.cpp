@@ -1,14 +1,15 @@
-#include "connectdisks/client.hpp"
+#include "four-across/networking/client/client.hpp"
 
 #include <boost/asio.hpp>
 
 #include <iostream>
 #include <thread>
 
-using namespace connectdisks;
-using connectdisks::client::Client;
+using game::networking::client::Client;
+using game::FourAcross;
 
 std::unique_ptr<Client> gameClient;
+std::unique_ptr<boost::asio::io_service> ioService;
 
 // Sets up and runs gameClient
 void runClient();
@@ -17,34 +18,56 @@ void runClient();
 	Callbacks to use with gameClient
 */
 
-void onConnect(Board::player_size_t id);
+void onConnect(uint8_t id);
+void onQueuePositionUpdated(uint64_t position);
 void onDisconnect();
 
-void onGameStart(Board::player_size_t numPlayers, Board::player_size_t first, 
-				 Board::board_size_t cols, Board::board_size_t rows);
-void onGameEnd(Board::player_size_t winner);
+void onGameStart(uint8_t numPlayers, uint8_t first, uint8_t cols, uint8_t rows);
+void onGameEnd(uint8_t winner);
 
-Board::board_size_t onTakeTurn();
-void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column);
+void onTakeTurn();
+void onTurnResult(FourAcross::TurnResult result, uint8_t column);
 
-void onUpdate(Board::player_size_t player, Board::board_size_t col);
+void onUpdate(uint8_t player, uint8_t col);
 
-// Prompts user to input that they're ready to play
-bool getUserReady();
+/*
+	User input prompts
+*/
 
-// Prompts user if they want to play again in same lobby
-bool getUserRematch();
+std::future<void> readAsync;
+std::atomic<bool> cancelRead{false};
+
+std::function<bool(std::string)> inputTask;
+
+// Reads input continuously from cin
+void readInput();
+
+// Asks if user is ready to play
+void getUserReady();
+bool readUserReady(std::string input);
+
+// Asks if user wants to rematch (stay in same lobby)
+void getUserRematch();
+bool readUserRematch(std::string input);
+
+// Ask for player's turn (column)
+void getUserColumn();
+bool readUserColumn(std::string input);
 
 int main(int argc, char* argv[])
 {
 	try
 	{
+		ioService.reset(new boost::asio::io_service{});
+		readAsync = std::async(std::launch::async, readInput);
 		runClient();
 	}
 	catch (std::exception& e)
 	{
 		std::cerr << e.what() << "\n";
 	}
+	cancelRead = true;
+	readAsync.get();
 	std::cout << "Press enter to exit..." << std::endl;
 	std::cin.clear();
 	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -54,24 +77,21 @@ void runClient()
 {
 	try
 	{
-		boost::asio::io_service service;
-		gameClient.reset(new Client{service});
+		gameClient.reset(new Client{*ioService});
 
 		gameClient->addConnectHandler(onConnect);
+		gameClient->addQueueUpdateHandler(onQueuePositionUpdated);
 		gameClient->addDisconnectHandler(onDisconnect);
-
-		gameClient->addReadyStatusHandler(getUserReady);
-		gameClient->addRematchStatusHandler(getUserRematch);
 
 		gameClient->addGameStartHandler(onGameStart);
 		gameClient->addGameEndHandler(onGameEnd);
 
-		gameClient->addTurnHandler(onTakeTurn);
+		gameClient->addTurnRequestHandler(onTakeTurn);
 		gameClient->addTurnResultHandler(onTurnResult);
 		gameClient->addGameUpdateHandler(onUpdate);
 
 		gameClient->connectToServer("127.0.0.1", 8888);
-		service.run();
+		ioService->run();
 	}
 	catch (std::exception& e)
 	{
@@ -79,65 +99,155 @@ void runClient()
 	}
 }
 
-bool getUserReady()
+void readInput()
 {
-	std::string input;
-	for (;;)
+	while (!cancelRead)
+	{
+		std::string line;
+		std::getline(std::cin, line);
+		if (inputTask)
+		{
+			bool done = inputTask(line);
+			// input consumed, task done
+			if (done)
+			{
+				inputTask = nullptr;
+			}
+		}
+	}
+}
+
+void getUserReady()
+{
+	std::cout << "Input \"ready\" if you want to play, or \"quit\" to disconnect\n";
+	inputTask = readUserReady;
+}
+
+bool readUserReady(std::string input)
+{
+	bool ready;
+	if (input == "ready")
+	{
+		std::cout << "Sending ready to server\n";
+		ready = true;
+	}
+	else if (input == "quit")
+	{
+		ready = false;
+	}
+	else
 	{
 		std::cout << "Input \"ready\" if you want to play, or \"quit\" to disconnect\n";
-		std::getline(std::cin, input);
-		if (input == "ready")
-		{
-			std::cout << "Sending ready to server\n";
-			return true;
-		}
-		else if (input == "quit")
-		{
-			std::cout << "Sending quit to server\n";
-			return false;
-		}
+		return false;
 	}
+
+	if (ready)
+	{
+		gameClient->toggleReady();
+	}
+	else
+	{
+		ioService->stop();
+		ioService.reset();
+	}
+
+	return true;
 }
 
-bool getUserRematch()
+void getUserRematch()
 {
-	std::string input;
-	for (;;)
+	std::cout << "Input \"rematch\" if you want to play, or \"quit\" to disconnect\n";
+	inputTask = readUserRematch;
+}
+
+bool readUserRematch(std::string input)
+{
+	bool rematch = false;
+	if (input == "rematch")
+	{
+		std::cout << "Sending rematch to server\n";
+		rematch = true;
+	}
+	else if (input == "quit")
+	{
+		rematch = false;
+	}
+	else
 	{
 		std::cout << "Input \"rematch\" if you want to play, or \"quit\" to disconnect\n";
-		std::getline(std::cin, input);
-		if (input == "rematch")
-		{
-			std::cout << "Sending rematch to server\n";
-			return true;
-		}
-		else if (input == "quit")
-		{
-			std::cout << "Sending quit to server\n";
-			return false;
-		}
+		return false;
 	}
+
+	if (rematch)
+	{
+		gameClient->toggleReady();
+	}
+	else
+	{
+		ioService->stop();
+		ioService.reset();
+	}
+	return true;
 }
 
-void onConnect(Board::player_size_t id)
+void getUserColumn()
+{
+	inputTask = readUserColumn;
+}
+
+bool readUserColumn(std::string input)
+{
+	const auto maxColumns = static_cast<int>(gameClient->getGame()->getNumColumns());
+
+	int column{-1};
+	try
+	{
+		size_t pos = 0;
+		column = std::stoi(input, &pos);
+		if (pos == input.size() && column > 0 && column <= maxColumns)
+		{
+			// read successful, take turn
+			gameClient->takeTurn(column - 1);
+			return true;
+		}
+	}
+	catch (...) // invalid_argument or out_of_range
+	{
+	}
+	std::cout << "Invalid input, try again: ";
+	
+	return false;
+}
+
+void onConnect(uint8_t id)
 {
 	std::cout << "You have connected to the game server. Your id is " << static_cast<int>(id) << "\n";
+	// ask if user is ready and quit if not
+	getUserReady();
+}
+
+void onQueuePositionUpdated(uint64_t position)
+{
+	std::cout << "Server is full, you are in position " << position << "\n";
 }
 
 void onDisconnect()
 {
 	std::cout << "You have disconnected from the game server.\n";
+
+	// can either connect to server again, or exit process
+	exit(EXIT_SUCCESS); // for now just exit
 }
 
-void onGameStart(Board::player_size_t numPlayers, Board::player_size_t first,
-	Board::board_size_t cols, Board::board_size_t rows)
+void onGameStart(uint8_t numPlayers, uint8_t first,
+	uint8_t cols, uint8_t rows)
 {
 	std::cout << "Your game has started with " << static_cast<int>(numPlayers) << " players.\n"
 		<< "Player " << static_cast<int>(first) << " is first.\n"
 		<< "The board size is " << static_cast<int>(cols) << "x" << static_cast<int>(rows) << "\n";
 }
 
-void onGameEnd(Board::player_size_t winner)
+void onGameEnd(uint8_t winner)
 {
 	std::cout << "Your game has ended.\n";
 	if (winner == 0)
@@ -151,9 +261,11 @@ void onGameEnd(Board::player_size_t winner)
 		std::cout << "You can exit this window to leave\n";
 	}
 
+	// ask if user wants to play again
+	getUserRematch();
 }
 
-Board::board_size_t onTakeTurn()
+void onTakeTurn()
 {
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "It's your turn!\n"
@@ -161,35 +273,12 @@ Board::board_size_t onTakeTurn()
 		static_cast<int>(gameClient->getGame()->getNumColumns()) <<
 		"): ";
 
-	const auto maxColumns = static_cast<int>(gameClient->getGame()->getNumColumns());
-
-	
-	// read line from cin until a valid column is read
-	int column{-1};
-	std::string input;
-	for (;;)
-	{
-		std::getline(std::cin, input);
-		try
-		{
-			size_t pos = 0;
-			column = std::stoi(input, &pos);
-			if (pos == input.size() && column > 0 && column <= maxColumns)
-			{
-				break;
-			}
-		}
-		catch (...) // invalid_argument or out_of_range
-		{
-		}
-		std::cout << "Invalid input, try again: ";
-	}
-	return static_cast<Board::board_size_t>(column) - 1;
+	getUserColumn();
 }
 
-void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
+void onTurnResult(FourAcross::TurnResult result, uint8_t column)
 {
-	using TurnResult = ConnectDisks::TurnResult;
+	using TurnResult = FourAcross::TurnResult;
 	switch (result)
 	{
 	// successful turn
@@ -216,7 +305,7 @@ void onTurnResult(ConnectDisks::TurnResult result, Board::board_size_t column)
 	}
 }
 
-void onUpdate(Board::player_size_t player, Board::board_size_t col)
+void onUpdate(uint8_t player, uint8_t col)
 {
 	std::cout << *gameClient->getGame() << "\n";
 	std::cout << "Player " << static_cast<int>(player) << " dropped a piece in column " <<

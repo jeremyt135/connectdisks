@@ -7,27 +7,30 @@
     <Filter Include="src">
       <UniqueIdentifier>{6456470c-3d1f-48bc-8689-d878923b6947}</UniqueIdentifier>
     </Filter>
-    <Filter Include="connectdisks">
+    <Filter Include="game">
       <UniqueIdentifier>{68ae8c88-6d0d-463c-9e2c-93d00ed17712}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\connectdisks\server.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\connectdisks\messaging.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\connectdisks\gamelobby.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\connectdisks\connection.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\logging.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\signals_helper.hpp">
+    <ClInclude Include="..\include\signals-helper.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\type-utility.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\four-across\networking\server\connection.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\four-across\networking\server\gamelobby.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\four-across\networking\server\server.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\four-across\networking\messaging.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
@@ -37,16 +40,16 @@
     </ClCompile>
     <ClCompile Include="testserver.cpp" />
     <ClCompile Include="..\src\board.cpp">
-      <Filter>connectdisks</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\connectdisks.cpp">
-      <Filter>connectdisks</Filter>
+      <Filter>game</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gamelobby.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\connection.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game.cpp">
+      <Filter>game</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
