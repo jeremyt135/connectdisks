@@ -117,7 +117,7 @@ namespace game
 					case MessageType::ping:
 					{
 						printDebug("PONG\n");
-						//sendPong();
+						sendPong();
 					}
 					break;
 					case MessageType::gameStart:
