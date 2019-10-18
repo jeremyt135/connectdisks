@@ -35,7 +35,7 @@ namespace game
 				Server& operator=(const Server&) = delete;
 
 			private:
-				// limit is mostly arbitrary, but should probably be small unless lobbies poll i/o on their own thread
+				// TODO: determine appropriate limit
 				static constexpr uint8_t maxLobbies{4};
 
 				void waitForConnections();
