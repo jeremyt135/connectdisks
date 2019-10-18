@@ -38,6 +38,81 @@ namespace game
 				startLobby();
 			}
 
+			void GameLobby::startLobby()
+			{
+				lobbyIsOpen = true;
+				canAddPlayers = true;
+				print("GameLobby [", this, "]: has started\n");
+			}
+
+			void GameLobby::startGame()
+			{
+				isPlayingGame = true;
+				canAddPlayers = false;
+
+				gameStarted();
+				takeTurn(game->getCurrentPlayer());
+			}
+
+			void GameLobby::stopGame()
+			{
+				// stop playing if lost a player
+				print("GameLobby [", this, "]: is stopping game\n");
+				numReady = 0;
+				isPlayingGame = false;
+				game.reset();
+				gameEnded(game->noWinner);
+			}
+
+			void GameLobby::onGameOver()
+			{
+				// no longer playing a game but do not tell players game is over again
+				if (game->hasWinner())
+				{
+					gameEnded(game->getWinner());
+				}
+				else
+				{
+					gameEnded(game->noWinner);
+				}
+				isPlayingGame = false;
+				numReady = 0;
+				game.reset();
+			}
+
+			void GameLobby::addPlayer(std::shared_ptr<Connection> connection)
+			{
+				if (!canAddPlayers)
+				{
+					return;
+				}
+
+				const auto id = getFirstAvailableId();
+
+				players[id] = connection;
+
+				players[id]->setId(id + 1);
+				players[id]->setGameLobby(this);
+
+				{
+					using std::placeholders::_1;
+					using std::placeholders::_2;
+					using std::bind;
+					connection->addDisconnectHandler(bind(&GameLobby::onDisconnect, this, _1));
+					connection->addReadyHandler(bind(&GameLobby::onReady, this, _1));
+					connection->addTurnHandler(bind(&GameLobby::onTakeTurn, this, _1, _2));
+				}
+				++numPlayers;
+			}
+
+			uint8_t GameLobby::getFirstAvailableId() const
+			{
+				// find shared_ptr<Connection> holding a nullptr
+				const auto iter = std::find_if(players.begin(), players.end(), [](std::shared_ptr<Connection> con){ return con == nullptr; });
+				const auto index = std::distance(players.begin(), iter);
+				return static_cast<uint8_t>(index);
+			}
+
 			void GameLobby::onDisconnect(std::shared_ptr<Connection> connection)
 			{
 				// find the player that disconnected
@@ -51,7 +126,7 @@ namespace game
 					});
 				if (playerIter != players.end())
 				{
-					// reset connection pointer
+					// start process of closing connection by releasing our handle of the shared_ptr
 					playerIter->reset();
 
 					if (numPlayers > 0)
@@ -66,7 +141,6 @@ namespace game
 					{
 						--numReady;
 					}
-
 
 					print("GameLobby[", this, "]: player disconnected; remaining: ", static_cast<int>(numPlayers), "\n");
 
@@ -139,48 +213,6 @@ namespace game
 				}
 			}
 
-			void GameLobby::startGame()
-			{
-				isPlayingGame = true;
-				canAddPlayers = false;
-
-				gameStarted();
-				takeTurn(game->getCurrentPlayer());
-			}
-
-			void GameLobby::stopGame()
-			{
-				// stop playing if lost a player
-				print("GameLobby [", this, "]: is stopping game\n");
-				numReady = 0;
-				isPlayingGame = false;
-				game.reset();
-				gameEnded(game->noWinner);
-			}
-
-			void GameLobby::addPlayer(std::shared_ptr<Connection> connection)
-			{
-				using std::placeholders::_1;
-				using std::placeholders::_2;
-				using std::bind;
-
-				if (!canAddPlayers)
-				{
-					return;
-				}
-
-				const auto id = getFirstAvailableId();
-
-				players[id] = connection;
-
-				players[id]->setId(id + 1);
-				players[id]->setGameLobby(this);
-				connection->addDisconnectHandler(bind(&GameLobby::onDisconnect, this, _1));
-				connection->addReadyHandler(bind(&GameLobby::onReady, this, _1));
-				connection->addTurnHandler(bind(&GameLobby::onTakeTurn, this, _1, _2));
-				++numPlayers;
-			}
-
 			bool GameLobby::isEmpty() const noexcept
 			{
 				return players.empty();
@@ -201,43 +233,10 @@ namespace game
 				return game.get();
 			}
 
-			void GameLobby::startLobby()
-			{
-				lobbyIsOpen = true;
-				canAddPlayers = true;
-				print("GameLobby [", this, "]: has started\n");
-			}
-
-			void GameLobby::onGameOver()
-			{
-				// no longer playing a game but do not tell players game is over again
-				if (game->hasWinner())
-				{
-					gameEnded(game->getWinner());
-				}
-				else
-				{
-					gameEnded(game->noWinner);
-				}
-				isPlayingGame = false;
-				numReady = 0;
-				game.reset();
-			}
-
 			bool GameLobby::allPlayersAreReady() const noexcept
 			{
 				return numReady == numPlayers;
 			}
-
-
-			uint8_t GameLobby::getFirstAvailableId() const
-			{
-				// find shared_ptr<Connection> holding a nullptr
-				const auto iter = std::find_if(players.begin(), players.end(), [](std::shared_ptr<Connection> con){ return con == nullptr; });
-				const auto index = std::distance(players.begin(), iter);
-				return static_cast<uint8_t>(index);
-			}
-
 		}
 	}
 }
