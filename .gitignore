@@ -27,11 +27,6 @@
 *.a
 *.lib
 
-# Executables
-*.exe
-*.out
-*.app
-
 # Visual Studio gitignore rules from github
 
 ## Ignore Visual Studio temporary files, build results, and
@@ -52,20 +47,23 @@
 # Mono auto generated files
 mono_crash.*
 
-# Build results
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
-bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
+# MSVC project directories (but allow vcxproj files)
+client/*
+server/*
+game/*
+
+# Allow VC project files
+!client/client.vcxproj
+!client/client.vcxproj.filters
+!server/server.vcxproj
+!server/server.vcxproj.filters
+!game/game.vcxproj
+!game/game.vcxproj.filters
+
+# Allow executables
+!bin/**/server.exe
+!bin/**/client.exe
+
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
