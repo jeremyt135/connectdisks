@@ -22,7 +22,7 @@ The included Visual Studio solution creates its output in a directory "bin/(Plat
 of the solution. 
 Build files for other platforms can also be made using the included CMakeLists.
 
-By default, the server is configured to run on the local network using TCP port 8888. If this port can't be used for some reason, "server/testserver.cpp" and "client/testclient.cpp" can be modified to use a different port.
+By default, the server is configured to run on the local network using TCP port 8888. If this port can't be used for some reason, "server/run-server.cpp" and "client/run-client.cpp" can be modified to use a different port.
 
 The server is also set to a max of 4 active game lobbies, with 2 players per lobby. The default board size is 5 columns, 4 rows.
 
