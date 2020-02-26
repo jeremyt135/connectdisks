@@ -19,68 +19,82 @@ namespace game
 	{
 		namespace client
 		{
-		/*
-			Allows user to play a FourAcross game online. Users should connect slots
-			to all gameplay related signals to play the game.
-		*/
+			/*
+				Allows user to play a FourAcross game online. Users should connect slots
+				to all gameplay related signals to play the game.
+			*/
 			class Client
 			{
 				/*
 					Signals for notifying users of Client that the game has changed state
 					or for certain network actions.
 				*/
-				// User has successfully connected & should ready when they want to play
+				// User has connected
 				ADD_SIGNAL(Connect, connected, void, uint8_t)
 				// User connected but is in queue and will receive queue position updates
 				ADD_SIGNAL(QueueUpdate, queueUpdated, void, uint64_t)
-				// User has successfully disconnected
+				// User has disconnected
 				ADD_SIGNAL(Disconnect, disconnected, void)
-				// Game has started
-				ADD_SIGNAL(GameStart, gameStarted, void, uint8_t, uint8_t, uint8_t, uint8_t)
-				// Game has ended
-				ADD_SIGNAL(GameEnd, gameEnded, void, uint8_t)
-				// Client received result of previous turn
-				ADD_SIGNAL(TurnResult, turnResult, void, FourAcross::TurnResult, uint8_t)
-				// Client received result of opponent turn
-				ADD_SIGNAL(GameUpdate, gameUpdated, void, uint8_t, uint8_t)
-				// User should take their turn
-				ADD_SIGNAL(TurnRequest, requestTurn, void)
-
 			public:
-
-				Client(boost::asio::io_service& ioService);
+				Client();
 				Client(const Client&) = delete;
-				~Client();
+				virtual ~Client();
 
 				Client& operator=(const Client&) = delete;
 
 				// Connects to a FourAcross game server
-				void connectToServer(std::string address, uint16_t port);
+				void connect(std::string address, uint16_t port);
 
-				// Sets Client to ready, indicating that user is ready to play. Users
-				// should call this function only after connecting to a server successfully.
+				// Disconnects from the server. Useful to external threads that
+				// need to manually disconnect while preserving the underlying context.
+				void disconnect();
+
+				// Disconnects from the server, closing the connection, and stops
+				// any i/o operations. Useful to external threads needing
+				// to forcibly stop the client while discarding the context.
+				void stop();
+			protected:
+				// Sends the desired turn to the server.
+				void sendTurn(uint8_t column);
+
+				// Sets Client to ready, indicating that user is ready to play.
 				void toggleReady();
-
-				// Attempts to take the user's desired turn. Users should only call this 
-				// function after their TurnRequest handler is called.
-				void takeTurn(uint8_t column);
 
 				// Returns game instance for querying and displaying
 				const FourAcross* getGame() const noexcept;
+				
+				/*
+					Methods for notifying subscribers of changes in the game's connection status.
+					Derived classes can override these to add additional work.
+				*/
+				// Notifies subscribers when the game client has connected to the server. 
+				virtual void onConnect(uint8_t playerId);
+
+				// Notifies subscribies when the game client has disconnected.
+				virtual void onDisconnect();
+
+				// Notifies subscribies when the game client has disconnected.
+				virtual void onQueueUpdate(uint64_t queuePosition);
+
+				/*
+					Methods for handling changes in game state received from the server.
+				*/
+				// Handles the game starting with the number of players, the first player, and the board dimensions.
+				virtual void onGameStart(uint8_t numPlayers, uint8_t firstPlayer, uint8_t cols, uint8_t rows) = 0;
+
+				// Handles the end of the game. Derived classes can prompt for rematch and call toggleReady or immediately quit.
+				virtual void onGameEnd(uint8_t winner) = 0;
+
+				// Handles an update to the game state that did not originate from this client ( i.e. opponent turns).
+				virtual void onGameUpdate(uint8_t player, uint8_t col) = 0;
+
+				// Handles the validation result of the turn previously sent to the server.
+				virtual void onTurnResult(FourAcross::TurnResult result, uint8_t column) = 0;
+
+				// Handles a request to get the user's turn. Derived classes should obtain a value and call sendTurn with it.
+				virtual void handleTurnRequest() = 0;
+
 			private:
-				// Waits for data to be available on socket
-				void waitForMessages();
-
-				// Socket I/O callbacks
-				void onConnected(const boost::system::error_code& error);
-				void onReadSocket(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
-				void onWriteSocket(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
-
-				void sendMessage(Message* message);
-				void sendPong();
-
-				void handleDisconnect();
-
 				void startGame(uint8_t numPlayers, uint8_t first, uint8_t cols, uint8_t rows);
 				void stopGame(uint8_t winner);
 
@@ -89,7 +103,19 @@ namespace game
 				void checkTurnResult(FourAcross::TurnResult result, uint8_t col);
 				void takeOpponentTurn(uint8_t player, uint8_t col);
 
-				boost::asio::ip::tcp::socket socket;
+				void handleConnect(const boost::system::error_code& error);
+				void handleRead(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
+				void handleWrite(std::shared_ptr<Message> message, const boost::system::error_code& error, size_t len);
+
+				void stopContext();
+
+				void waitForMessages();
+
+				void sendMessage(Message* message);
+				void sendPong();
+
+				std::unique_ptr<boost::asio::ip::tcp::socket> socket;
+				boost::asio::io_context ioContext;
 
 				uint8_t playerId;
 				bool isConnected;

@@ -33,7 +33,7 @@
     <ClCompile Include="..\src\game.cpp" />
     <ClCompile Include="..\src\gamelobby.cpp" />
     <ClCompile Include="..\src\server.cpp" />
-    <ClCompile Include="testserver.cpp" />
+    <ClCompile Include="run-server.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

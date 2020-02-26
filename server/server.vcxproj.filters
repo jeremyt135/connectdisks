@@ -38,7 +38,6 @@
     <ClCompile Include="..\src\server.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="testserver.cpp" />
     <ClCompile Include="..\src\board.cpp">
       <Filter>game</Filter>
     </ClCompile>
@@ -51,5 +50,6 @@
     <ClCompile Include="..\src\game.cpp">
       <Filter>game</Filter>
     </ClCompile>
+    <ClCompile Include="run-server.cpp" />
   </ItemGroup>
 </Project>

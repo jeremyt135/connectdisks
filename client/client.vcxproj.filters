@@ -15,12 +15,15 @@
     <ClCompile Include="..\src\client.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="testclient.cpp" />
     <ClCompile Include="..\src\board.cpp">
       <Filter>game</Filter>
     </ClCompile>
     <ClCompile Include="..\src\game.cpp">
       <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="run-client.cpp" />
+    <ClCompile Include="..\src\consoleclient.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -37,6 +40,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\four-across\networking\messaging.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\four-across\networking\client\consoleclient.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

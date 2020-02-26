@@ -157,11 +157,13 @@
   <ItemGroup>
     <ClCompile Include="..\src\board.cpp" />
     <ClCompile Include="..\src\client.cpp" />
+    <ClCompile Include="..\src\consoleclient.cpp" />
     <ClCompile Include="..\src\game.cpp" />
-    <ClCompile Include="testclient.cpp" />
+    <ClCompile Include="run-client.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\four-across\networking\client\client.hpp" />
+    <ClInclude Include="..\include\four-across\networking\client\consoleclient.hpp" />
     <ClInclude Include="..\include\four-across\networking\messaging.hpp" />
     <ClInclude Include="..\include\logging.hpp" />
     <ClInclude Include="..\include\signals-helper.hpp" />

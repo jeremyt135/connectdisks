@@ -22,24 +22,26 @@ namespace game
 	{
 		namespace client
 		{
-			Client::Client(boost::asio::io_service & ioService)
+			Client::Client()
 				:
-				socket{ioService},
 				playerId{0},
 				isConnected{false},
 				game{nullptr}
 			{
+
+				socket.reset(new tcp::socket{ioContext});
 			}
 
 			Client::~Client()
 			{
+				stopContext();
 			}
 
-			void Client::connectToServer(std::string address, uint16_t port)
+			void Client::connect(std::string address, uint16_t port)
 			{
 				try
 				{
-					socket.connect(tcp::endpoint{address_v4::from_string(address), port});
+					socket->connect(tcp::endpoint{address_v4::from_string(address), port});
 				}
 				catch (std::exception& error)
 				{
@@ -47,6 +49,19 @@ namespace game
 					throw;
 				}
 				waitForMessages();
+				ioContext.run();
+			}
+
+			void Client::disconnect()
+			{
+				socket->close();
+				socket.reset();
+			}
+
+			void Client::stop()
+			{
+				disconnect();
+				stopContext();
 			}
 
 			void Client::toggleReady()
@@ -63,18 +78,21 @@ namespace game
 				printDebug("Client waiting for messages\n");
 				// read message from server
 				std::shared_ptr<Message> message{new Message{}};
-				boost::asio::async_read(socket,
-					boost::asio::buffer(message.get(), sizeof(Message)),
-					std::bind(
-						&Client::onReadSocket,
-						this,
-						message,
-						std::placeholders::_1,
-						std::placeholders::_2
-					));
+				if (socket != nullptr)
+				{
+					boost::asio::async_read(*socket,
+						boost::asio::buffer(message.get(), sizeof(Message)),
+						std::bind(
+							&Client::handleRead,
+							this,
+							message,
+							std::placeholders::_1,
+							std::placeholders::_2
+						));
+				}
 			}
 
-			void Client::onConnected(const boost::system::error_code & error)
+			void Client::handleConnect(const boost::system::error_code & error)
 			{
 				if (!error.failed())
 				{
@@ -86,7 +104,7 @@ namespace game
 				}
 			}
 
-			void Client::onReadSocket(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
+			void Client::handleRead(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
 			{
 				if (!error.failed())
 				{
@@ -104,14 +122,14 @@ namespace game
 					case MessageType::connected:
 						setPlayerId(message->data[0]);
 						isConnected = true;
-						connected(playerId);
+						onConnect(playerId);
 						break;
 					case MessageType::inQueue:
 					{
 						uint64_t position{0};
 						memcpy(&position, &message->data[0], sizeof(uint64_t));
 						boost::endian::big_to_native_inplace(position);
-						queueUpdated(position);
+						onQueueUpdate(position);
 					}
 					break;
 					case MessageType::ping:
@@ -151,7 +169,7 @@ namespace game
 						if (id == playerId && column == static_cast<uint8_t>(-1))
 						{
 							printDebug("Time for client to take turn\n");
-							requestTurn();
+							handleTurnRequest();
 						}
 					}
 					break;
@@ -191,11 +209,11 @@ namespace game
 						break;
 					}
 
-					handleDisconnect();
+					onDisconnect();
 				}
 			}
 
-			void Client::onWriteSocket(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
+			void Client::handleWrite(std::shared_ptr<Message> message, const boost::system::error_code & error, size_t len)
 			{
 				if (!error.failed())
 				{
@@ -213,25 +231,38 @@ namespace game
 				printDebug("Client id set to: ", static_cast<int>(playerId), "\n");
 			}
 
-			void Client::handleDisconnect()
+			void Client::onConnect(uint8_t playerId)
+			{
+				connected(playerId);
+			}
+
+			void Client::onDisconnect()
 			{
 				//closeSocket();
 				isConnected = false;
 				disconnected(); // tell lobby we're disconnecting
 			}
 
+			void Client::onQueueUpdate(uint64_t queuePosition)
+			{
+				queueUpdated(queuePosition);
+			}
+
 			void Client::sendMessage(Message* message)
 			{
 				auto messagePtr = std::shared_ptr<Message>(message);
-				boost::asio::async_write(socket,
-					boost::asio::buffer(messagePtr.get(), sizeof(Message)),
-					std::bind(
-						&Client::onWriteSocket,
-						this,
-						messagePtr,
-						std::placeholders::_1,
-						std::placeholders::_2
-					));
+				if (socket != nullptr)
+				{
+					boost::asio::async_write(*socket,
+						boost::asio::buffer(messagePtr.get(), sizeof(Message)),
+						std::bind(
+							&Client::handleWrite,
+							this,
+							messagePtr,
+							std::placeholders::_1,
+							std::placeholders::_2
+						));
+				}
 			}
 
 			void Client::sendPong()
@@ -244,12 +275,12 @@ namespace game
 			void Client::startGame(uint8_t numPlayers, uint8_t first, uint8_t cols, uint8_t rows)
 			{
 				game.reset(new FourAcross{numPlayers, first, cols, rows});
-				gameStarted(numPlayers, first, cols, rows);
+				onGameStart(numPlayers, first, cols, rows);
 			}
 
 			void Client::stopGame(uint8_t winner)
 			{
-				gameEnded(winner);
+				onGameEnd(winner);
 			}
 
 			void Client::checkTurnResult(FourAcross::TurnResult result, uint8_t column)
@@ -258,15 +289,15 @@ namespace game
 				{
 				case FourAcross::TurnResult::success:
 					game->takeTurn(playerId, column);
-					turnResult(result, column);
+					onTurnResult(result, column);
 					break;
 				case FourAcross::TurnResult::error:
 					printDebug("Client::onTurnResult: error taking turn, not requesting a new turn unless server asks\n");
 					break;
 				default:
 					printDebug("Client::onTurnResult: Unsuccessful turn, client sending new turn\n");
-					turnResult(result, column);
-					requestTurn(); // tell user to take turn again
+					onTurnResult(result, column);
+					handleTurnRequest();
 					break;
 				}
 
@@ -277,7 +308,7 @@ namespace game
 				// assume all turns sent to us from server are good
 				game->takeTurn(player, col);
 
-				gameUpdated(player, col);
+				onGameUpdate(player, col);
 			}
 
 			const FourAcross * Client::getGame() const noexcept
@@ -285,7 +316,12 @@ namespace game
 				return game.get();
 			}
 
-			void Client::takeTurn(uint8_t column)
+			void Client::stopContext()
+			{
+				ioContext.stop();
+			}
+
+			void Client::sendTurn(uint8_t column)
 			{
 				// send turn to server
 				auto message = new Message{};
