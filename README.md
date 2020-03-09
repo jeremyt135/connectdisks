@@ -1,8 +1,8 @@
 # Overview
 
-This project implements a TCP server and client (using C++ and Boost.Asio) for playing the [Connect Four game](https://en.wikipedia.org/wiki/Connect_Four) over a network.
+This project implements a TCP server and client for playing the [Connect Four game](https://en.wikipedia.org/wiki/Connect_Four).
 
-The server and client use asynchronous socket I/O (through Boost.Asio) but each are polled from a single thread.
+The server and client use asynchronous socket I/O through Boost.Asio, with each calling `run` on one `io_context` from the main thread.
 
 ## Running the server and client programs
 
