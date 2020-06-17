@@ -33,4 +33,6 @@ The server is also set to a max of 4 active game lobbies, with 2 players per lob
     
 ## Platforms
 
-- The project has been tested on Windows 10 x64 using Visual Studio 2017 (MSVC 14.1).
+- Project has been built and tested on following platforms: 
+  - Windows 10 (x86_64) - MSVC 14.1 (Visual Studio 2017)
+  - Ubuntu 20.04 LTS (x86_64) - gcc 9.3.0
