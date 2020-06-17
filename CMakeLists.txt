@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.7)
 
 project(fouracross)
 
-set (Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_LIBS ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 find_package(Boost REQUIRED system date_time regex)
@@ -25,3 +25,4 @@ add_executable(client client/run-client.cpp ${CLIENT_SRC})
 target_include_directories(client PUBLIC "include/" ${Boost_INCLUDE_DIRS})
 target_link_libraries(client ${Boost_LIBRARIES} Threads::Threads)
 
+set_target_properties(server client PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED ON)
