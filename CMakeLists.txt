@@ -9,7 +9,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Boost REQUIRED system date_time regex)
 find_package(Threads REQUIRED)
 
-if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DDEBUG)
 endif()
 
