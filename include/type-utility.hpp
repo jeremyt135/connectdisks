@@ -35,7 +35,7 @@ namespace typeutil
 		template<typename T = UT>
 		static constexpr E cast(T t) noexcept
 		{
-			static_assert(std::is_same_v<T, UT>, "error: argument to cast must be same as underlying type");
+			static_assert(std::is_same<T, UT>::value, "error: argument to cast must be same as underlying type");
 			return static_cast<E>(t);
 		}
 	};
