@@ -400,5 +400,8 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
-# Build directory I'm using for CMAKE
-cmake_build/
+
+build/
+bin/
+
+.vscode
