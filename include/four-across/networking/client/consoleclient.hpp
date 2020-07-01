@@ -34,23 +34,21 @@ namespace game
 			private:
 				class InputWorker
 				{
-					using InputTask = std::function<bool(std::string)>;
 				public:
-					~InputWorker();
-					void clearTask();
-					void setTask(InputTask task);
+                    using InputCallback = std::function<bool(std::string)>;
 
-					void start();
+					~InputWorker();
+
+                    void start(InputCallback callback);
+					void restart(InputCallback callback);
 					void stop();
+
+					bool isRunning();
 				private:
-					void run();
+                    void readUntilDone(InputCallback callback);
 
 					std::thread thread;
 					std::atomic<bool> running{false};
-
-					std::mutex taskMutex;
-					InputTask task;
-					std::atomic<bool> hasTask{false};
 				};
 				InputWorker inputWorker;
 			};

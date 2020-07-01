@@ -2,19 +2,20 @@
 
 #include <iostream>
 
-game::networking::client::ConsoleClient::ConsoleClient()
+using namespace game::networking::client;
+
+ConsoleClient::ConsoleClient()
 {
-	inputWorker.start();
 }
 
-void game::networking::client::ConsoleClient::onConnect(uint8_t playerId)
+void ConsoleClient::onConnect(uint8_t playerId)
 {
 	Client::onConnect(playerId);
 	std::cout << "You have connected to the game server. Your id is " << static_cast<int>(playerId) << "\n";
 	std::cout << "Input \"ready\" if you want to play, or \"quit\" to disconnect:" << std::endl;
 
 	// Allow user to confirm when they are ready or want to quit
-	inputWorker.setTask(
+	inputWorker.start(
 		[this](std::string input){
 			if (input == "ready")
 			{
@@ -36,23 +37,22 @@ void game::networking::client::ConsoleClient::onConnect(uint8_t playerId)
 	);
 }
 
-void game::networking::client::ConsoleClient::onDisconnect()
+void ConsoleClient::onDisconnect()
 {
 	Client::onDisconnect();
 	// Stop reading input
 	std::cout << "You have disconnected from the game server. Enter anything to exit...\n";
-	inputWorker.clearTask();
 	inputWorker.stop();
 }
 
-void game::networking::client::ConsoleClient::onQueueUpdate(uint64_t queuePosition)
+void ConsoleClient::onQueueUpdate(uint64_t queuePosition)
 {
 	Client::onQueueUpdate(queuePosition);
 	std::cout << "Server is full, you are in position " << queuePosition << "\n";
 }
 
 
-void game::networking::client::ConsoleClient::onGameStart(uint8_t numPlayers, uint8_t firstPlayer, uint8_t cols, uint8_t rows)
+void ConsoleClient::onGameStart(uint8_t numPlayers, uint8_t firstPlayer, uint8_t cols, uint8_t rows)
 {
 	// Display info about the game that just started
 	std::cout << "Your game has started with " << static_cast<int>(numPlayers) << " players.\n"
@@ -60,13 +60,19 @@ void game::networking::client::ConsoleClient::onGameStart(uint8_t numPlayers, ui
 		<< "The board size is " << static_cast<int>(cols) << "x" << static_cast<int>(rows) << "\n";
 }
 
-void game::networking::client::ConsoleClient::onGameEnd(uint8_t winner)
+void ConsoleClient::onGameEnd(uint8_t winner)
 {
-	std::cout << "The game is over, player" << static_cast<int>(winner) << " has won" << std::endl;
+	const uint8_t noWinner = 0;
+	if (static_cast<int>(winner) == noWinner){
+		std::cout << "The game has ended because your opponent disconnected." << std::endl;
+	}
+	else {
+		std::cout << "The game is over, player" << static_cast<int>(winner) << " has won" << std::endl;	
+	}
 	std::cout << "Input \"rematch\" if you want to rematch, or \"quit\" to quit:" << std::endl;
 
 	// Allow user to confirm if they want a rematch or to quit
-	inputWorker.setTask(
+	inputWorker.restart(
 		[this](std::string input){
 			if (input == "rematch")
 			{
@@ -88,7 +94,7 @@ void game::networking::client::ConsoleClient::onGameEnd(uint8_t winner)
 	);
 }
 
-void game::networking::client::ConsoleClient::onGameUpdate(uint8_t player, uint8_t col)
+void ConsoleClient::onGameUpdate(uint8_t player, uint8_t col)
 {
 	// Display the new state of the game
 	std::cout << *this->getGame() << "\n";
@@ -97,7 +103,7 @@ void game::networking::client::ConsoleClient::onGameUpdate(uint8_t player, uint8
 		static_cast<int>(col) + 1 << "\n";
 }
 
-void game::networking::client::ConsoleClient::onTurnResult(FourAcross::TurnResult result, uint8_t column)
+void ConsoleClient::onTurnResult(FourAcross::TurnResult result, uint8_t column)
 {
 	using TurnResult = FourAcross::TurnResult;
 	switch (result)
@@ -126,7 +132,7 @@ void game::networking::client::ConsoleClient::onTurnResult(FourAcross::TurnResul
 	}
 }
 
-void game::networking::client::ConsoleClient::handleTurnRequest()
+void ConsoleClient::handleTurnRequest()
 {
 	// Display the current game state
 	std::cout << *this->getGame() << "\n";
@@ -137,7 +143,7 @@ void game::networking::client::ConsoleClient::handleTurnRequest()
 
 	const auto maxColumns = static_cast<int>(this->getGame()->getNumColumns());
 	// Prompt user for their turn
-	inputWorker.setTask(
+	inputWorker.restart(
 		[this, maxColumns](std::string input){
 			int column{-1};
 			try
@@ -162,76 +168,56 @@ void game::networking::client::ConsoleClient::handleTurnRequest()
 }
 
 
-game::networking::client::ConsoleClient::InputWorker::~InputWorker()
+ConsoleClient::InputWorker::~InputWorker()
 {
 	stop();
 }
 
-void game::networking::client::ConsoleClient::InputWorker::clearTask()
-{
-	if (!running)
-	{
-		return;
-	}
-	
-	if (hasTask)
-	{
-		std::lock_guard<std::mutex> lock(taskMutex);
-		hasTask = false;
-		this->task = nullptr;
-	}
-}
-
-void game::networking::client::ConsoleClient::InputWorker::setTask(InputTask task)
-{
-	if (!running)
-	{
-		return;
-	}
-	{
-		std::lock_guard<std::mutex> lock(taskMutex);
-		this->task = task;
-		hasTask = true;
-	}
-}
-
-void game::networking::client::ConsoleClient::InputWorker::start()
+void ConsoleClient::InputWorker::start(ConsoleClient::InputWorker::InputCallback callback)
 {
 	if (running)
 	{
 		return;
 	}
-	thread = std::thread(&InputWorker::run, this);
+	running = true;
+	thread = std::thread(&InputWorker::readUntilDone, this, callback);
 }
 
-void game::networking::client::ConsoleClient::InputWorker::stop()
+
+void ConsoleClient::InputWorker::restart(ConsoleClient::InputWorker::InputCallback callback)
+{
+	if (running)
+	{
+		stop();
+	}
+	start(callback);
+}
+
+void ConsoleClient::InputWorker::stop()
 {
 	if (!running)
 	{
 		return;
 	}
-	clearTask();
 	running = false;
 	thread.join();
 }
 
-void game::networking::client::ConsoleClient::InputWorker::run()
+bool ConsoleClient::InputWorker::isRunning(){
+	return running;
+}
+
+void ConsoleClient::InputWorker::readUntilDone(InputCallback callback)
 {
-	running = true;
 	while (running)
 	{
-		if (hasTask)
+		// Read continuously from stdin until callback indicates good input received.
+		std::string input;
+		std::cin >> input;
+		if (running && callback(input))
 		{
-			// Read from stdin when there is a task to do - if the task is cleared 
-			// the user still has to input something but it will be safely ignored.
-			std::string input;
-			std::cin >> input;
-			std::lock_guard<std::mutex> lock(taskMutex);
-			if (running && hasTask && task(input))
-			{
-				hasTask = false;
-				task = nullptr;
-			}
+			break;
 		}
 	}
 }
+
