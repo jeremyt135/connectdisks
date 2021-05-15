@@ -17,15 +17,15 @@ The client & server can be built using the included CMake project or the include
 ## Locally using built CMake project:
 
 Run the server:<br/>
-`build/server/runserver 31001`
+```build/server/runserver 31001```
 
 Run a client:<br/>
-`build/client/runclient 127.0.0.1 31001`
+```build/client/runclient 127.0.0.1 31001```
 
 ## Using Docker image:
 
 Run the server (assuming image is named `game-svr`):<br/>
-`docker run -it --rm --init -p 31001:31001 --name server game-svr`
+```docker run -d --init -p 31001:31001 --name server game-svr```
 
 Run a client (assuming image is named `game-cli`):<br/>
 ```
