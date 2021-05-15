@@ -28,10 +28,10 @@ Run the server (assuming image is named `game-svr`):<br/>
 `docker run -it --rm --init -p 31001:31001 --name server game-svr`
 
 Run a client (assuming image is named `game-cli`):<br/>
-<code>
-SERVER=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' server) <br>
+```
+SERVER=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' server)
 docker run -it --rm --init game-cli $SERVER 31001
-</code>
+```
 
 # Playing the game
 
