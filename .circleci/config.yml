@@ -11,7 +11,7 @@ jobs:
       - run: |
           echo "$GHCR_PAT" | docker login ghcr.io -u jtaylorsoftware --password-stdin
       # Build image
-      - run: docker build -t $IMAGE_TAG -f server/Dockerfile .
+      - run: docker build -t $IMAGE_TAG -f client/Dockerfile .
       # Publish to ghcr
       - run: docker push $IMAGE_TAG
   build-server:
@@ -24,7 +24,7 @@ jobs:
       - run: |
           echo "$GHCR_PAT" | docker login ghcr.io -u jtaylorsoftware --password-stdin
       # Build image
-      - run: docker build -t $IMAGE_TAG -f client/Dockerfile .
+      - run: docker build -t $IMAGE_TAG -f server/Dockerfile .
       # Publish to ghcr
       - run: docker push $IMAGE_TAG
 
