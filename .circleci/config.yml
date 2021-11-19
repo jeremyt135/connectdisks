@@ -1,0 +1,39 @@
+version: 2.1
+
+jobs:
+  build-client:
+    environment: 
+      IMAGE_TAG: ghcr.io/jtaylorsoftware/fouracross-client
+    machine: true
+    steps:
+      - checkout
+      # Login to ghcr
+      - run: |
+          echo "$GHCR_PAT" | docker login ghcr.io -u jtaylorsoftware --password-stdin
+      # Build image
+      - run: docker build -t $IMAGE_TAG -f server/Dockerfile .
+      # Publish to ghcr
+      - run: docker push $IMAGE_TAG
+  build-server:
+    environment: 
+      IMAGE_TAG: ghcr.io/jtaylorsoftware/fouracross-server
+    machine: true
+    steps:
+      - checkout
+      # Login to ghcr
+      - run: |
+          echo "$GHCR_PAT" | docker login ghcr.io -u jtaylorsoftware --password-stdin
+      # Build image
+      - run: docker build -t $IMAGE_TAG -f client/Dockerfile .
+      # Publish to ghcr
+      - run: docker push $IMAGE_TAG
+
+workflows:
+  build:
+    jobs:
+      - build-server:
+          context:
+            - ghcr
+      - build-client:
+          context:
+            - ghcr
