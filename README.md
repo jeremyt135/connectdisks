@@ -22,15 +22,15 @@ Run the server:<br/>
 Run a client:<br/>
 ```build/client/runclient 127.0.0.1 31001```
 
-## Using Docker image:
+## Using Docker image from ghcr.io:
 
-Run the server (assuming image is named `game-svr`):<br/>
-```docker run -d --init -p 31001:31001 --name server game-svr```
+Run the server:<br/>
+```docker run -d -p 31001:31001 --rm --init --name server --platform linux/amd64 ghcr.io/jtaylorsoftware/fouracross-server```
 
-Run a client (assuming image is named `game-cli`):<br/>
+Run a client (you will need to run at least two clients to play):<br/>
 ```
 SERVER=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' server)
-docker run -it --rm --init game-cli $SERVER 31001
+docker run -it --rm --init ghcr.io/jtaylorsoftware/fouracross-client $SERVER 31001
 ```
 
 # Playing the game
